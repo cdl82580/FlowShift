@@ -26,41 +26,46 @@ export function NewRunPage() {
   const [source, setSource]           = useState('');
   const [destination, setDestination] = useState('');
   const [description, setDescription] = useState('');
-  const [file, setFile]               = useState<File | null>(null);
-  const [loading, setLoading]         = useState(false);
-  const [error, setError]             = useState('');
-  const [dragOver, setDragOver]       = useState(false);
+  const [fileName, setFileName]         = useState<string | null>(null);
+  const [fileContent, setFileContent]   = useState<string | null>(null);
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState('');
+  const [dragOver, setDragOver]         = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  function readFileAsText(f: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => resolve((ev.target?.result as string) ?? '');
-      reader.onerror = () => reject(new Error('Could not read file — try a different browser or file'));
-      reader.readAsText(f, 'UTF-8');
-    });
+  // Read file content immediately so the reference never goes stale
+  function ingestFile(f: File) {
+    setFileName(f.name);
+    setFileContent(null); // clear while reading
+    const reader = new FileReader();
+    reader.onload = (ev) => setFileContent((ev.target?.result as string) ?? '');
+    reader.onerror = () => {
+      setFileName(null);
+      setError('Could not read that file. Try selecting it via the browse button instead of drag-and-drop.');
+    };
+    reader.readAsText(f, 'UTF-8');
+  }
+
+  function clearFile() {
+    setFileName(null);
+    setFileContent(null);
+    if (fileRef.current) fileRef.current.value = '';
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!source || !destination) return setError('Select both a source and destination platform.');
     if (source === destination)  return setError('Source and destination must be different platforms.');
-    if (!file && !description.trim()) return setError('Provide a description or upload a workflow file (or both).');
+    if (!fileContent && !description.trim()) return setError('Provide a description or upload a workflow file (or both).');
     setError('');
     setLoading(true);
     try {
-      let fileContent: string | undefined;
-      let fileName: string | undefined;
-      if (file) {
-        fileContent = await readFileAsText(file);
-        fileName = file.name;
-      }
       const run = await api.createRun({
         source,
         destination,
         description: description.trim() || undefined,
-        fileContent,
-        fileName,
+        fileContent: fileContent ?? undefined,
+        fileName:    fileName ?? undefined,
       });
       navigate(`/runs/${run.id}`);
     } catch (err) {
@@ -72,8 +77,8 @@ export function NewRunPage() {
   function onDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragOver(false);
-    const f = e.dataTransfer.files[0];
-    if (f) setFile(f);
+    const f = e.dataTransfer.files[0] ?? e.dataTransfer.items[0]?.getAsFile();
+    if (f) ingestFile(f);
   }
 
   return (
@@ -154,9 +159,9 @@ export function NewRunPage() {
               onDrop={onDrop}
               onClick={() => fileRef.current?.click()}
               className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all select-none ${
-                dragOver ? 'border-indigo-500   bg-indigo-500/5'
-                : file   ? 'border-emerald-500/50 bg-emerald-500/5'
-                         : 'border-white/8 hover:border-white/20 bg-slate-900/50'
+                dragOver  ? 'border-indigo-500    bg-indigo-500/5'
+                : fileName ? 'border-emerald-500/50 bg-emerald-500/5'
+                           : 'border-white/8 hover:border-white/20 bg-slate-900/50'
               }`}
             >
               <input
@@ -164,12 +169,14 @@ export function NewRunPage() {
                 type="file"
                 accept=".json,.yaml,.yml,.txt,.xml"
                 className="hidden"
-                onChange={e => setFile(e.target.files?.[0] ?? null)}
+                onChange={e => { const f = e.target.files?.[0]; if (f) ingestFile(f); }}
               />
-              {file ? (
+              {fileName ? (
                 <div>
-                  <p className="text-emerald-400 font-medium text-sm">✓ {file.name}</p>
-                  <button type="button" onClick={ev => { ev.stopPropagation(); setFile(null); }}
+                  <p className="text-emerald-400 font-medium text-sm">
+                    {fileContent ? `✓ ${fileName}` : `⏳ Reading ${fileName}…`}
+                  </p>
+                  <button type="button" onClick={ev => { ev.stopPropagation(); clearFile(); }}
                     className="text-slate-600 hover:text-slate-400 text-xs mt-1 transition-colors underline">
                     Remove
                   </button>
