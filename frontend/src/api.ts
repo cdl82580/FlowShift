@@ -40,14 +40,12 @@ export const api = {
   getRuns: (userId: string) =>
     request<{ runs: RunSummary[] }>(`/users/${userId}/runs`),
 
-  createRun: (data: { source: string; destination: string; description?: string; file?: File }) => {
-    const form = new FormData();
-    form.append('source', data.source);
-    form.append('destination', data.destination);
-    if (data.description) form.append('description', data.description);
-    if (data.file) form.append('file', data.file);
-    return request<Run>('/runs', { method: 'POST', body: form });
-  },
+  createRun: (data: { source: string; destination: string; description?: string; fileContent?: string; fileName?: string }) =>
+    request<Run>('/runs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }),
 
   getRun: (id: string) => request<Run>(`/runs/${id}`),
 };

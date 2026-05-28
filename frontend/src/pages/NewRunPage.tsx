@@ -40,8 +40,19 @@ export function NewRunPage() {
     setError('');
     setLoading(true);
     try {
-      // Returns 202 immediately — processing happens in the background
-      const run = await api.createRun({ source, destination, description: description.trim() || undefined, file: file ?? undefined });
+      let fileContent: string | undefined;
+      let fileName: string | undefined;
+      if (file) {
+        fileContent = await file.text();
+        fileName = file.name;
+      }
+      const run = await api.createRun({
+        source,
+        destination,
+        description: description.trim() || undefined,
+        fileContent,
+        fileName,
+      });
       navigate(`/runs/${run.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Submission failed');

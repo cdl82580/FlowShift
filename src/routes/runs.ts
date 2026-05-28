@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { Client } from '@libsql/client';
 import { getDb } from '../db';
@@ -9,13 +8,11 @@ import { getOrCreateUserFolder, createRunFolder, uploadFile } from '../services/
 import { config } from '../config';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// ── POST /runs ── create run, return 202 immediately, process in background
-router.post('/', requireApiKey, upload.single('file'), async (req: Request, res: Response) => {
+// ── POST /runs ── accepts JSON: { source, destination, description?, fileContent?, fileName? }
+router.post('/', requireApiKey, async (req: Request, res: Response) => {
   const { user } = req as AuthedRequest;
-  const { source, destination, description } = req.body as Record<string, string>;
-  const file = req.file;
+  const { source, destination, description, fileContent, fileName } = req.body as Record<string, string>;
 
   if (!source || !destination) {
     return res.status(400).json({ error: 'source and destination are required' });
@@ -29,14 +26,12 @@ router.post('/', requireApiKey, upload.single('file'), async (req: Request, res:
   if (source === destination) {
     return res.status(400).json({ error: 'source and destination cannot be the same' });
   }
-  if (!file && !description?.trim()) {
-    return res.status(400).json({ error: 'Provide a file upload or a description (or both)' });
+  if (!fileContent?.trim() && !description?.trim()) {
+    return res.status(400).json({ error: 'Provide a file or a description (or both)' });
   }
 
   const runId = uuidv4();
   const db = getDb();
-  const fileContent = file ? file.buffer.toString('utf-8') : undefined;
-  const fileName    = file ? file.originalname : undefined;
 
   await db.execute({
     sql: `INSERT INTO runs (id, user_id, source, destination, description, original_filename, status)
@@ -53,7 +48,13 @@ router.post('/', requireApiKey, upload.single('file'), async (req: Request, res:
     runId,
     user,
     db,
-    submission: { source, destination, description: description?.trim(), fileContent, fileName },
+    submission: {
+      source,
+      destination,
+      description: description?.trim(),
+      fileContent: fileContent?.trim() || undefined,
+      fileName: fileName || undefined,
+    },
   });
 });
 
