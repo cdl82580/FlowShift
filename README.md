@@ -16,7 +16,22 @@ Submit a source workflow (file upload or plain-text description) and a source/de
 
 **Supported platforms:** n8n · Make · Zapier · Tray · Boomi · Workato · Celigo · Power Automate
 
-> **Power Automate note:** Microsoft's flow format is proprietary. The generated import file is a best-effort approximation — connections and credentials will need manual configuration in Power Automate before the flow runs correctly. The playbook is the primary guide for Power Automate migrations.
+**Source platform is optional.** Omitting it switches Claude to *Build Guide* mode — a step-by-step guide for building the workflow from scratch in the destination platform rather than a migration.
+
+### Import file compatibility
+
+| Platform | Import file | Notes |
+|---|---|---|
+| n8n | ✅ Reliable | Open, well-documented JSON format |
+| Make | ✅ Reliable | Blueprint JSON — connection re-linking is expected during any Make import |
+| Zapier | ❌ Not available | Zapier does not support workflow import |
+| Tray | ⚠️ Best-effort | Proprietary format — step definitions and connectors need manual adjustment |
+| Boomi | ⚠️ Best-effort | Complex enterprise schema tied to Atoms/connectors — use the playbook as the primary guide |
+| Workato | ⚠️ Best-effort | Proprietary recipe format — trigger and action configs may need manual adjustment |
+| Celigo | ⚠️ Best-effort | Proprietary flows with account-specific mappings — integrations need manual configuration |
+| Power Automate | ⚠️ Best-effort | Proprietary Microsoft schema — connections and credentials need manual configuration |
+
+The UI surfaces an inline caveat banner on the run detail page for all ⚠️ platforms.
 
 ---
 
@@ -115,13 +130,15 @@ X-API-Key: <key>
 Content-Type: application/json
 ```
 
-| Field | Type | Required |
-|---|---|---|
-| `source` | string | ✓ |
-| `destination` | string | ✓ |
-| `description` | string | one of these two |
-| `fileContent` | string (full file text) | one of these two |
-| `fileName` | string | alongside `fileContent` |
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `source` | string | | Optional. Omit to produce a Build Guide instead of a migration playbook. |
+| `destination` | string | ✓ | Required. The target platform. |
+| `description` | string | one of † | Plain-text or markdown description of the workflow. |
+| `fileContent` | string | one of † | Full text of the source workflow file. |
+| `fileName` | string | | With `fileContent` — used to name the Drive upload. |
+
+† At least one of `description` or `fileContent` must be provided.
 
 **Async** — returns `202 Accepted` immediately with `status: "pending"`. Claude + Drive upload run in the background. Poll `GET /api/runs/:id` until `status` is `"completed"` or `"failed"` (typically 30–60 seconds).
 
