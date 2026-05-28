@@ -1,0 +1,392 @@
+{
+  "info": {
+    "name": "FlowShift API",
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "description": "iPaaS Migration Playbook Generator API.\n\n**Quick start:**\n1. Run **Register User** — the `api_key`, `user_id` are saved automatically.\n2. Run **Create Run (Description)** or **Create Run (File Content)** — `run_id` is saved automatically.\n3. Run **Get Run** to poll for results (status: pending → processing → completed).\n\nAll requests use the `{{base_url}}`, `{{api_key}}`, `{{user_id}}`, and `{{run_id}}` collection variables.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://flowshift-cdl.fly.dev",
+      "type": "string",
+      "description": "API base URL"
+    },
+    {
+      "key": "api_key",
+      "value": "",
+      "type": "string",
+      "description": "Your API key — populated automatically after Register User"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string",
+      "description": "Your user ID — populated automatically after Register User"
+    },
+    {
+      "key": "run_id",
+      "value": "",
+      "type": "string",
+      "description": "Most recent run ID — populated automatically after Create Run"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Verify the API is up and running."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "url": { "raw": "{{base_url}}/health" }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"ok\",\n  \"service\": \"flowshift-api\",\n  \"timestamp\": \"2026-05-28T19:00:00.000Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('api_key', body.api_key);",
+                  "  pm.collectionVariables.set('user_id', body.id);",
+                  "  pm.test('api_key and user_id saved to collection variables', () => {",
+                  "    pm.expect(body.api_key).to.be.a('string');",
+                  "    pm.expect(body.id).to.be.a('string');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"you@example.com\",\n  \"name\": \"Your Name\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users"]
+            },
+            "description": "Create a new user account. The `api_key` in the response is shown **once only** — it's automatically saved to the `{{api_key}}` collection variable by the test script."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"you@example.com\",\n  \"name\": \"Your Name\"\n}"
+                },
+                "url": { "raw": "{{base_url}}/api/users" }
+              },
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"id\": \"7dcaac32-a5dd-4994-9617-113ae5ba98a1\",\n  \"email\": \"you@example.com\",\n  \"name\": \"Your Name\",\n  \"api_key\": \"daf50f53-5c77-4a8a-b36c-bd1a1be17ebe\"\n}"
+            },
+            {
+              "name": "409 Conflict — email already registered",
+              "originalRequest": {
+                "method": "POST",
+                "url": { "raw": "{{base_url}}/api/users" }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "body": "{\n  \"error\": \"A user with that email already exists\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Current User (me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "{{api_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "me"]
+            },
+            "description": "Identify the authenticated user by API key. Useful for sign-in flows — returns the full user object without exposing the key."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [{ "key": "X-API-Key", "value": "{{api_key}}" }],
+                "url": { "raw": "{{base_url}}/api/users/me" }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"id\": \"7dcaac32-a5dd-4994-9617-113ae5ba98a1\",\n  \"email\": \"you@example.com\",\n  \"name\": \"Your Name\",\n  \"gdrive_folder_id\": \"1ILBWqtebGL9GI3kZTp21CBktxmBDqWVI\",\n  \"gdrive_folder_url\": \"https://drive.google.com/drive/folders/1ILBWqtebGL9GI3kZTp21CBktxmBDqWVI\",\n  \"created_at\": \"2026-05-28 16:05:00\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "{{api_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "{{user_id}}"]
+            },
+            "description": "Fetch a user's profile by ID. The authenticated user can only fetch their own profile."
+          },
+          "response": []
+        },
+        {
+          "name": "List User Runs",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "{{api_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{user_id}}/runs",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "{{user_id}}", "runs"]
+            },
+            "description": "List all migration runs for a user, newest first. Returns summary fields only (no playbook text or file content)."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [{ "key": "X-API-Key", "value": "{{api_key}}" }],
+                "url": { "raw": "{{base_url}}/api/users/{{user_id}}/runs" }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"runs\": [\n    {\n      \"id\": \"09944998-fd18-4f9f-a603-9d87efebddfb\",\n      \"source\": \"Zapier\",\n      \"destination\": \"n8n\",\n      \"status\": \"completed\",\n      \"original_filename\": null,\n      \"gdrive_run_folder_url\": \"https://drive.google.com/drive/folders/1ILBWqtebGL9GI3kZTp21CBktxmBDqWVI\",\n      \"error_message\": null,\n      \"created_at\": \"2026-05-28 17:06:21\",\n      \"completed_at\": \"2026-05-28 17:06:53\"\n    }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Runs",
+      "item": [
+        {
+          "name": "Create Run (description only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 202) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('run_id', body.id);",
+                  "  pm.test('run_id saved to collection variables', () => {",
+                  "    pm.expect(body.id).to.be.a('string');",
+                  "    pm.expect(body.status).to.equal('pending');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-API-Key", "value": "{{api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source\": \"Zapier\",\n  \"destination\": \"n8n\",\n  \"description\": \"When a new row is added to Google Sheets, send a Slack message to #general with the row data.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/runs",
+              "host": ["{{base_url}}"],
+              "path": ["api", "runs"]
+            },
+            "description": "Start a migration run using a plain-text description of the workflow. Returns `202 Accepted` immediately — Claude processes in the background. Poll `GET /api/runs/{{run_id}}` until `status` is `completed` or `failed`.\n\n**Platforms:** `n8n`, `Make`, `Zapier`, `Tray`, `Boomi`, `Workato`, `Celigo`"
+          },
+          "response": [
+            {
+              "name": "202 Accepted",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "X-API-Key", "value": "{{api_key}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"source\": \"Zapier\",\n  \"destination\": \"n8n\",\n  \"description\": \"When a new row is added to Google Sheets, send a Slack message to #general with the row data.\"\n}"
+                },
+                "url": { "raw": "{{base_url}}/api/runs" }
+              },
+              "status": "Accepted",
+              "code": 202,
+              "body": "{\n  \"id\": \"09944998-fd18-4f9f-a603-9d87efebddfb\",\n  \"user_id\": \"7dcaac32-a5dd-4994-9617-113ae5ba98a1\",\n  \"source\": \"Zapier\",\n  \"destination\": \"n8n\",\n  \"description\": \"When a new row is added to Google Sheets, send a Slack message to #general with the row data.\",\n  \"original_filename\": null,\n  \"status\": \"pending\",\n  \"playbook_text\": null,\n  \"import_file_name\": null,\n  \"import_file_extension\": null,\n  \"import_file_content\": null,\n  \"has_import_file\": false,\n  \"gdrive_run_folder_url\": null,\n  \"error_message\": null,\n  \"created_at\": \"2026-05-28 17:06:21\",\n  \"completed_at\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Run (with file content)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 202) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('run_id', body.id);",
+                  "  pm.test('run_id saved to collection variables', () => {",
+                  "    pm.expect(body.id).to.be.a('string');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-API-Key", "value": "{{api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source\": \"n8n\",\n  \"destination\": \"Make\",\n  \"fileName\": \"my_workflow.json\",\n  \"fileContent\": \"{\\\"name\\\": \\\"My Workflow\\\", \\\"nodes\\\": [], \\\"connections\\\": {}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/runs",
+              "host": ["{{base_url}}"],
+              "path": ["api", "runs"]
+            },
+            "description": "Start a migration run by providing the source workflow file content as a JSON string in `fileContent`. The field accepts the full text of a JSON, YAML, XML, or TXT file.\n\nYou can combine `fileContent` and `description` in the same request."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Run",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "{{api_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/runs/{{run_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "runs", "{{run_id}}"]
+            },
+            "description": "Fetch a run by ID. Poll this endpoint every few seconds while `status` is `pending` or `processing`.\n\n**Status lifecycle:** `pending` → `processing` → `completed` | `failed`\n\nWhen `completed`, the response includes `playbook_text` (markdown), `import_file_content` (ready-to-import JSON), `import_file_name`, and `gdrive_run_folder_url`."
+          },
+          "response": [
+            {
+              "name": "200 OK — completed",
+              "originalRequest": {
+                "method": "GET",
+                "header": [{ "key": "X-API-Key", "value": "{{api_key}}" }],
+                "url": { "raw": "{{base_url}}/api/runs/{{run_id}}" }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"id\": \"09944998-fd18-4f9f-a603-9d87efebddfb\",\n  \"user_id\": \"7dcaac32-a5dd-4994-9617-113ae5ba98a1\",\n  \"source\": \"Zapier\",\n  \"destination\": \"n8n\",\n  \"description\": \"When a new row is added to Google Sheets, send a Slack message to #general.\",\n  \"original_filename\": null,\n  \"status\": \"completed\",\n  \"playbook_text\": \"# Flowshift Migration Playbook\\n\\n## Migration Overview...\",\n  \"import_file_name\": \"flowshift_zapier_to_n8n.json\",\n  \"import_file_extension\": \"json\",\n  \"import_file_content\": \"{\\\"name\\\": \\\"Google Sheets → Slack #general\\\", \\\"nodes\\\": [...]}\",\n  \"has_import_file\": true,\n  \"gdrive_run_folder_url\": \"https://drive.google.com/drive/folders/1ILBWqtebGL9GI3kZTp21CBktxmBDqWVI\",\n  \"error_message\": null,\n  \"created_at\": \"2026-05-28 17:06:21\",\n  \"completed_at\": \"2026-05-28 17:06:53\"\n}"
+            },
+            {
+              "name": "200 OK — still processing",
+              "originalRequest": {
+                "method": "GET",
+                "header": [{ "key": "X-API-Key", "value": "{{api_key}}" }],
+                "url": { "raw": "{{base_url}}/api/runs/{{run_id}}" }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"id\": \"09944998-fd18-4f9f-a603-9d87efebddfb\",\n  \"status\": \"processing\",\n  \"playbook_text\": null,\n  \"import_file_content\": null,\n  \"gdrive_run_folder_url\": null,\n  \"created_at\": \"2026-05-28 17:06:21\",\n  \"completed_at\": null\n}"
+            },
+            {
+              "name": "200 OK — failed",
+              "originalRequest": {
+                "method": "GET",
+                "header": [{ "key": "X-API-Key", "value": "{{api_key}}" }],
+                "url": { "raw": "{{base_url}}/api/runs/{{run_id}}" }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"id\": \"09944998-fd18-4f9f-a603-9d87efebddfb\",\n  \"status\": \"failed\",\n  \"error_message\": \"Claude API error: ...\",\n  \"completed_at\": \"2026-05-28 17:07:00\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [{ "key": "X-API-Key", "value": "{{api_key}}" }],
+                "url": { "raw": "{{base_url}}/api/runs/{{run_id}}" }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"error\": \"Run not found\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth (Google Drive)",
+      "item": [
+        {
+          "name": "Authorize Google Drive",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/google",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "google"]
+            },
+            "description": "Open this URL in a browser to start the Google OAuth2 flow. You'll be redirected to Google's consent screen. After approving, the refresh token is stored in the database and all future runs will upload outputs to Google Drive.\n\n**One-time setup only.** The token persists across deploys."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
