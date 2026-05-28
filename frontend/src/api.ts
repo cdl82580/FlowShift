@@ -9,9 +9,11 @@ function getApiKey(): string {
   }
 }
 
+const API = '/api';
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const apiKey = getApiKey();
-  const res = await fetch(path, {
+  const res = await fetch(`${API}${path}`, {
     ...options,
     headers: {
       ...(apiKey ? { 'X-API-Key': apiKey } : {}),

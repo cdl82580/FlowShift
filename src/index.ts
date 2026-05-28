@@ -24,10 +24,11 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'flowshift-api', timestamp: new Date().toISOString() });
 });
 
-// API routes
-app.use('/auth',  authRouter);
-app.use('/users', usersRouter);
-app.use('/runs',  runsRouter);
+// OAuth callbacks stay at /auth (matches GCP redirect URI)
+app.use('/auth', authRouter);
+// Data API prefixed with /api to avoid SPA route collisions
+app.use('/api/users', usersRouter);
+app.use('/api/runs',  runsRouter);
 
 // SPA fallback — any non-API route serves index.html
 app.get('*', (_req, res) => {
