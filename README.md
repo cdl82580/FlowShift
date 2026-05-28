@@ -73,6 +73,38 @@ List all runs for a user, newest first. Returns lightweight summary objects — 
 
 ---
 
+```
+POST /api/users/recover
+Content-Type: application/json
+```
+Request an API key recovery email.
+
+```json
+{ "email": "you@example.com" }
+```
+
+Always returns `200 OK` with the same neutral message regardless of whether the email is registered (prevents account enumeration). If the email is found, a one-time recovery link is sent via Resend and expires in **15 minutes**.
+
+> **Local dev:** If `RESEND_API_KEY` is not set, the recovery URL is printed to the server console instead of being emailed.
+
+---
+
+```
+GET /api/users/recover/:token
+```
+Exchange a recovery token for a new API key. The token is single-use and invalidated immediately on redemption. The previous API key is permanently replaced.
+
+| Field | Type | Description |
+|---|---|---|
+| `api_key` | string | New API key — **shown once only** |
+| `id` | string | User UUID |
+| `email` | string | Registered email |
+| `name` | string \| null | Display name |
+
+Errors: `400` if the token is invalid, already used, or expired.
+
+---
+
 ### Runs
 
 ```
@@ -158,10 +190,11 @@ The React SPA is built by Vite and served as static files from the same Express 
 
 | Page | Path | Description |
 |---|---|---|
-| Auth | `/auth` | Register with email/name or sign in with an existing API key |
+| Auth | `/auth` | Register · Sign In · "Forgot your API key?" recovery form |
 | Dashboard | `/` | Run history with status badges, Drive links, stats panel, and an API key show/copy widget |
 | New Migration | `/runs/new` | Platform picker, description textarea, file upload (drag-and-drop or browse), and paste fallback |
 | Run Detail | `/runs/:id` | Playbook tab (rendered markdown), Import File tab (syntax-highlighted, copy + download), Drive link |
+| Recover | `/recover?token=<uuid>` | Exchanges a recovery token for a new API key, displays it with a copy button, auto-signs in |
 
 The run detail page polls `GET /api/runs/:id` every 3 seconds while status is `pending` or `processing`, then renders results automatically when the run completes.
 

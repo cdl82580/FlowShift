@@ -2,7 +2,7 @@
   "info": {
     "name": "FlowShift API",
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "description": "## FlowShift \u2014 iPaaS Migration Playbook Generator\n\nFlowShift converts workflows between iPaaS platforms (n8n, Make, Zapier, Tray, Boomi, Workato, Celigo) using Claude AI. Submit a source workflow \u2014 as a file or plain-text description \u2014 and receive a detailed migration playbook plus a ready-to-import destination workflow file.\n\n---\n\n### Authentication\n\nAll `/api/*` endpoints require an `X-API-Key` header. The key is returned **once** when you register and is stored in the `{{api_key}}` collection variable automatically.\n\n```\nX-API-Key: {{api_key}}\n```\n\n---\n\n### Quick start\n\n1. **Register** \u2014 run *Register User* to create an account. `api_key` and `user_id` are saved to collection variables automatically.\n2. **Submit a run** \u2014 run *Create Run (description only)* or *Create Run (with file content)*. The `run_id` is saved automatically.\n3. **Poll for results** \u2014 run *Get Run* every few seconds until `status` is `completed`. The response includes the full playbook text and import file content.\n4. **Browse history** \u2014 run *List User Runs* at any time to see all past migrations.\n\n---\n\n### Collection variables\n\n| Variable | Set by | Description |\n|---|---|---|\n| `base_url` | You | API base URL (default: `https://flowshift-cdl.fly.dev`) |\n| `api_key` | Register User (auto) | Your API key \u2014 required on all authenticated requests |\n| `user_id` | Register User (auto) | Your user ID |\n| `run_id` | Create Run (auto) | Most recently created run ID |\n\n### File uploads\n\nThe API accepts file content as a plain JSON string in `fileContent` \u2014 no binary upload. Read the file in a text editor, copy all, and paste into the request body. Chrome on macOS may block programmatic file reads (`NotReadableError`) for files with emoji in the filename; the web UI handles this automatically via a paste fallback.\n\n---\n\n### Run status lifecycle\n\n```\npending \u2192 processing \u2192 completed\n                    \u2198 failed\n```\n\n`POST /api/runs` returns `202 Accepted` with `status: pending` immediately. Claude processes the migration in the background (typically 30\u201360 seconds). Poll `GET /api/runs/:id` until status reaches a terminal state.",
+    "description": "## FlowShift \u2014 iPaaS Migration Playbook Generator\n\nFlowShift converts workflows between iPaaS platforms (n8n, Make, Zapier, Tray, Boomi, Workato, Celigo) using Claude AI. Submit a source workflow \u2014 as a file or plain-text description \u2014 and receive a detailed migration playbook plus a ready-to-import destination workflow file.\n\n---\n\n### Authentication\n\nAll `/api/*` endpoints require an `X-API-Key` header. The key is returned **once** when you register and is stored in the `{{api_key}}` collection variable automatically.\n\n```\nX-API-Key: {{api_key}}\n```\n\n---\n\n### Quick start\n\n1. **Register** \u2014 run *Register User* to create an account. `api_key` and `user_id` are saved to collection variables automatically.\n2. **Submit a run** \u2014 run *Create Run (description only)* or *Create Run (with file content)*. The `run_id` is saved automatically.\n3. **Poll for results** \u2014 run *Get Run* every few seconds until `status` is `completed`. The response includes the full playbook text and import file content.\n4. **Browse history** \u2014 run *List User Runs* at any time to see all past migrations.\n\n**Lost your API key?** Use *Request Recovery Email* (enter your registered email), then click the link in the email. *Redeem Recovery Token* exchanges the token for a new API key and auto-saves it.\n\n---\n\n### Collection variables\n\n| Variable | Set by | Description |\n|---|---|---|\n| `base_url` | You | API base URL (default: `https://flowshift-cdl.fly.dev`) |\n| `api_key` | Register User (auto) | Your API key \u2014 required on all authenticated requests |\n| `user_id` | Register User (auto) | Your user ID |\n| `run_id` | Create Run (auto) | Most recently created run ID |\n\n### File uploads\n\nThe API accepts file content as a plain JSON string in `fileContent` \u2014 no binary upload. Read the file in a text editor, copy all, and paste into the request body. Chrome on macOS may block programmatic file reads (`NotReadableError`) for files with emoji in the filename; the web UI handles this automatically via a paste fallback.\n\n---\n\n### Run status lifecycle\n\n```\npending \u2192 processing \u2192 completed\n                    \u2198 failed\n```\n\n`POST /api/runs` returns `202 Accepted` with `status: pending` immediately. Claude processes the migration in the background (typically 30\u201360 seconds). Poll `GET /api/runs/:id` until status reaches a terminal state.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -83,7 +83,7 @@
     },
     {
       "name": "Users",
-      "description": "User registration and profile management.\n\nUsers are identified by a UUID and authenticated via an API key. The API key is returned **once** at registration time and cannot be retrieved again \u2014 store it securely. If lost, you will need to register a new account.\n\nAll endpoints in this folder except *Register User* require the `X-API-Key` header.",
+      "description": "User registration and profile management.\n\nUsers are identified by a UUID and authenticated via an API key. The API key is returned **once** at registration time and cannot be retrieved again \u2014 store it securely. If lost, you will need to register a new account.\n\nAll endpoints in this folder except *Register User* require the `X-API-Key` header.\n\n**Recovery flow:** If a user loses their API key, `POST /recover` sends a one-time email link. `GET /recover/:token` validates the link, resets the key, and returns the new value. The old key is invalidated immediately on redemption.",
       "item": [
         {
           "name": "Register User",
@@ -384,6 +384,215 @@
               "status": "OK",
               "code": 200,
               "body": "{\n  \"runs\": []\n}"
+            }
+          ]
+        },
+        {
+          "name": "Request Recovery Email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK with neutral message', () => {",
+                  "  pm.expect(pm.response.code).to.equal(200);",
+                  "  pm.expect(pm.response.json()).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"you@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/recover",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "recover"
+              ]
+            },
+            "description": "Initiates the API key recovery flow. Sends a one-time recovery link to the provided email address.\n\n**Authentication:** None required.\n\n**Request body:**\n\n| Field | Type | Required | Description |\n|---|---|---|---|\n| `email` | string | \u2713 | The email address used when registering. |\n\n**Security note:** The response is always `200 OK` with the same neutral message regardless of whether the email is registered. This prevents account enumeration \u2014 an attacker cannot determine which emails have accounts.\n\n**Token behaviour:**\n- Valid for **15 minutes** from issuance\n- Single-use \u2014 invalidated immediately after the token is redeemed\n- Redeeming the token issues a new API key and **invalidates the previous one**\n\n**Local development:** If `RESEND_API_KEY` is not set as a server env var, the recovery URL is printed to the server console instead of being emailed. Use that URL directly to test the full flow without Resend configured.\n\n**Response fields:**\n\n| Field | Type | Description |\n|---|---|---|\n| `message` | string | Always `\"If that email is registered, a recovery link has been sent.\"` |"
+          },
+          "response": [
+            {
+              "name": "200 OK \u2014 recovery email sent (or email not found \u2014 same response)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"you@example.com\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/users/recover"
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"message\": \"If that email is registered, a recovery link has been sent.\"\n}"
+            },
+            {
+              "name": "400 Bad Request \u2014 invalid email",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"not-an-email\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/users/recover"
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"error\": \"Valid email is required\"\n}"
+            },
+            {
+              "name": "500 Internal Server Error \u2014 Resend delivery failure",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"you@example.com\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/users/recover"
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "status": "Internal Server Error",
+              "code": 500,
+              "body": "{\n  \"error\": \"Could not send recovery email. Try again later.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Redeem Recovery Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('api_key', body.api_key);",
+                  "  pm.collectionVariables.set('user_id', body.id);",
+                  "  pm.test('New api_key and user_id saved to collection variables', () => {",
+                  "    pm.expect(body.api_key).to.be.a('string').and.to.have.lengthOf.above(0);",
+                  "    pm.expect(body.id).to.be.a('string');",
+                  "  });",
+                  "  console.log('API key reset. Old key is now invalid. Store the new one securely.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/recover/:token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "recover",
+                ":token"
+              ],
+              "variable": [
+                {
+                  "key": "token",
+                  "value": "",
+                  "description": "The UUID token from the recovery email link (the `?token=` query param). Paste it here."
+                }
+              ]
+            },
+            "description": "Exchanges a valid, unexpired recovery token for a freshly generated API key. The old API key is permanently invalidated and the token is marked as used.\n\n**Authentication:** None required \u2014 the token itself is the credential.\n\n**Path parameters:**\n\n| Parameter | Description |\n|---|---|\n| `:token` | UUID recovery token from the email link (`?token=<uuid>`). Single-use; expires after 15 minutes. |\n\n**On success:** the test script automatically saves the new `api_key` and `user_id` to collection variables, replacing the old values.\n\n**Response fields:**\n\n| Field | Type | Description |\n|---|---|---|\n| `api_key` | string | Your new API key \u2014 **shown once only**, save it immediately |\n| `id` | string | User UUID |\n| `email` | string | Registered email address |\n| `name` | string \\| null | Display name |\n\n**Errors:**\n- `400 Invalid or already-used` \u2014 token doesn't exist or was already redeemed\n- `400 Expired` \u2014 15-minute window has passed; request a new recovery email\n\n**Frontend flow:** The web UI navigates to `/recover?token=<uuid>` when the email link is clicked. The page calls this endpoint, displays the new key with a copy button, auto-signs the user in, and redirects to the dashboard."
+          },
+          "response": [
+            {
+              "name": "200 OK \u2014 new API key issued",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/users/recover/valid-token-uuid"
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"api_key\": \"f8c3de3d-1fea-4d7c-a8b0-29f63c4c3454\",\n  \"id\": \"7dcaac32-a5dd-4994-9617-113ae5ba98a1\",\n  \"email\": \"you@example.com\",\n  \"name\": \"Your Name\"\n}"
+            },
+            {
+              "name": "400 Bad Request \u2014 invalid or already-used token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/users/recover/already-used-token"
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"error\": \"Invalid or already-used recovery link.\"\n}"
+            },
+            {
+              "name": "400 Bad Request \u2014 token expired",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/users/recover/expired-token"
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"error\": \"Recovery link has expired. Request a new one.\"\n}"
             }
           ]
         }
