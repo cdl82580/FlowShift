@@ -32,6 +32,15 @@ export function NewRunPage() {
   const [dragOver, setDragOver]       = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  function readFileAsText(f: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => resolve((ev.target?.result as string) ?? '');
+      reader.onerror = () => reject(new Error('Could not read file — try a different browser or file'));
+      reader.readAsText(f, 'UTF-8');
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!source || !destination) return setError('Select both a source and destination platform.');
@@ -43,7 +52,7 @@ export function NewRunPage() {
       let fileContent: string | undefined;
       let fileName: string | undefined;
       if (file) {
-        fileContent = await file.text();
+        fileContent = await readFileAsText(file);
         fileName = file.name;
       }
       const run = await api.createRun({
