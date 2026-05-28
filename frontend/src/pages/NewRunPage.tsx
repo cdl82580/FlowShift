@@ -28,22 +28,46 @@ export function NewRunPage() {
   const [description, setDescription] = useState('');
   const [fileName, setFileName]         = useState<string | null>(null);
   const [fileContent, setFileContent]   = useState<string | null>(null);
+  const [pasteContent, setPasteContent] = useState('');
+  const [showPaste, setShowPaste]       = useState(false);
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState('');
   const [dragOver, setDragOver]         = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Read file content immediately so the reference never goes stale
+  // Read file immediately on drop/select using two strategies:
+  // 1. readAsArrayBuffer + TextDecoder (avoids encoding issues)
+  // 2. readAsText fallback
   function ingestFile(f: File) {
     setFileName(f.name);
-    setFileContent(null); // clear while reading
-    const reader = new FileReader();
-    reader.onload = (ev) => setFileContent((ev.target?.result as string) ?? '');
-    reader.onerror = () => {
-      setFileName(null);
-      setError('Could not read that file. Try clicking Browse to select it from your file picker.');
+    setFileContent(null);
+    setError('');
+
+    const tryArrayBuffer = () => {
+      const r2 = new FileReader();
+      r2.onload = (ev) => {
+        try {
+          const buf  = ev.target?.result as ArrayBuffer;
+          const text = new TextDecoder('utf-8').decode(buf);
+          setFileContent(text);
+        } catch {
+          onFinalError('DecodeError');
+        }
+      };
+      r2.onerror = () => onFinalError(r2.error?.name ?? 'ReadError');
+      r2.readAsArrayBuffer(f);
     };
-    reader.readAsText(f, 'UTF-8');
+
+    const onFinalError = (code: string) => {
+      setFileName(null);
+      setError(`File read failed (${code}). Paste the content below instead.`);
+      setShowPaste(true);
+    };
+
+    const r1 = new FileReader();
+    r1.onload = (ev) => setFileContent((ev.target?.result as string) ?? '');
+    r1.onerror = () => tryArrayBuffer();   // first attempt failed → try buffer
+    r1.readAsText(f, 'UTF-8');
   }
 
   function clearFile() {
@@ -52,11 +76,14 @@ export function NewRunPage() {
     if (fileRef.current) fileRef.current.value = '';
   }
 
+  const effectiveContent = fileContent ?? (pasteContent.trim() || null);
+  const effectiveName    = fileName   ?? (pasteContent.trim() ? 'pasted_content.json' : null);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!source || !destination) return setError('Select both a source and destination platform.');
     if (source === destination)  return setError('Source and destination must be different platforms.');
-    if (!fileContent && !description.trim()) return setError('Provide a description or upload a workflow file (or both).');
+    if (!effectiveContent && !description.trim()) return setError('Provide a description or upload a workflow file (or both).');
     setError('');
     setLoading(true);
     try {
@@ -64,8 +91,8 @@ export function NewRunPage() {
         source,
         destination,
         description: description.trim() || undefined,
-        fileContent: fileContent ?? undefined,
-        fileName:    fileName ?? undefined,
+        fileContent: effectiveContent ?? undefined,
+        fileName:    effectiveName    ?? undefined,
       });
       navigate(`/runs/${run.id}`);
     } catch (err) {
@@ -152,6 +179,31 @@ export function NewRunPage() {
                 <PlatformBtn key={p} name={p} selected={destination === p} onClick={() => setDestination(destination === p ? '' : p)} />
               ))}
             </div>
+
+            {/* Paste fallback — shown automatically on read error, or manually */}
+            {(showPaste || pasteContent) ? (
+              <div className="mt-3">
+                <label className="block text-xs text-slate-500 mb-1.5">
+                  Paste file content here
+                  {pasteContent && <span className="text-emerald-400 ml-2">✓ ready</span>}
+                </label>
+                <textarea
+                  value={pasteContent}
+                  onChange={e => setPasteContent(e.target.value)}
+                  placeholder='{ "name": "My Workflow", "nodes": [...] }'
+                  rows={6}
+                  className="w-full bg-slate-800 border border-white/8 rounded-xl px-4 py-3 text-white text-xs font-mono placeholder-slate-600 focus:outline-none focus:border-indigo-500/60 transition-colors resize-none"
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowPaste(true)}
+                className="mt-2 text-slate-600 hover:text-slate-400 text-xs underline transition-colors"
+              >
+                Paste content instead
+              </button>
+            )}
           </div>
 
           {/* Description */}
