@@ -30,10 +30,11 @@ app.use('/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/runs',  runsRouter);
 
-// SPA fallback — any non-API route serves index.html
+// SPA fallback — any non-API route serves index.html (never cached)
 app.get('*', (_req, res) => {
   const index = path.join(PUBLIC_DIR, 'index.html');
   if (fs.existsSync(index)) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(index);
   } else {
     res.status(404).json({ error: 'Not found' });
