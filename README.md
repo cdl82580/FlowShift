@@ -14,7 +14,9 @@ Submit a source workflow (file upload or plain-text description) and a source/de
 2. **An import file** — a functional, ready-to-import JSON (n8n workflow, Make blueprint, etc.) with `{{PLACEHOLDER}}` tokens for API keys
 3. **A Google Drive folder** — both files uploaded automatically under a per-user, per-run subfolder, shared publicly via link
 
-**Supported platforms:** n8n · Make · Zapier · Tray · Boomi · Workato · Celigo
+**Supported platforms:** n8n · Make · Zapier · Tray · Boomi · Workato · Celigo · Power Automate
+
+> **Power Automate note:** Microsoft's flow format is proprietary. The generated import file is a best-effort approximation — connections and credentials will need manual configuration in Power Automate before the flow runs correctly. The playbook is the primary guide for Power Automate migrations.
 
 ---
 

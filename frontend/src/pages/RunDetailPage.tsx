@@ -149,6 +149,17 @@ export function RunDetailPage() {
               )}
             </div>
           </div>
+          {run.destination === 'Power Automate' && run.status === 'completed' && run.has_import_file && (
+            <div className="mt-4 flex items-start gap-3 px-4 py-3 bg-amber-500/5 border border-amber-500/20 rounded-xl">
+              <svg className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-amber-300/80 text-xs leading-relaxed">
+                <strong className="text-amber-300 font-semibold">Power Automate import note:</strong> Microsoft's flow format is proprietary and complex. The generated file is a best-effort approximation — connections, credentials, and some action parameters will likely need manual configuration in Power Automate before the flow runs correctly. Use the <strong className="text-amber-300">Playbook tab</strong> as your primary build guide.
+              </p>
+            </div>
+          )}
+
           <div className="mt-3 text-xs text-slate-600">
             {new Date(run.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
             {run.completed_at && (

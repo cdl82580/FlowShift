@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { config } from '../config';
 
-export const VALID_PLATFORMS = ['n8n', 'Make', 'Zapier', 'Tray', 'Boomi', 'Workato', 'Celigo'] as const;
+export const VALID_PLATFORMS = ['n8n', 'Make', 'Zapier', 'Tray', 'Boomi', 'Workato', 'Celigo', 'Power Automate'] as const;
 export type Platform = typeof VALID_PLATFORMS[number];
 
 export interface Submission {
@@ -80,6 +80,7 @@ Produce a complete ${docTitle} using EXACTLY this format:
 - If destination is Make: Provide a valid Blueprint JSON.
 - If destination is Zapier: Write "NOT AVAILABLE".
 - If destination is Tray: Provide a valid workflow JSON.
+- If destination is Power Automate: Provide a valid Power Automate flow definition JSON using the standard export schema (with $schema, contentVersion, parameters, triggers, and actions). Note that connections and credentials will require manual configuration in Power Automate after import.
 Provide actual functional logic, not a blank template. Use {{PLACEHOLDER}} for API keys.]
 ---END IMPORT FILE---
 

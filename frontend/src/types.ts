@@ -36,7 +36,7 @@ export interface AuthState {
   name: string | null;
 }
 
-export const PLATFORMS = ['n8n', 'Make', 'Zapier', 'Tray', 'Boomi', 'Workato', 'Celigo'] as const;
+export const PLATFORMS = ['n8n', 'Make', 'Zapier', 'Tray', 'Boomi', 'Workato', 'Celigo', 'Power Automate'] as const;
 export type Platform = (typeof PLATFORMS)[number];
 
 export const PLATFORM_COLORS: Record<Platform, { bg: string; text: string; dot: string }> = {
@@ -47,4 +47,5 @@ export const PLATFORM_COLORS: Record<Platform, { bg: string; text: string; dot: 
   Boomi:   { bg: 'bg-emerald-500/10',text: 'text-emerald-400', dot: 'bg-emerald-400' },
   Workato: { bg: 'bg-blue-500/10',   text: 'text-blue-400',    dot: 'bg-blue-400'    },
   Celigo:  { bg: 'bg-red-500/10',    text: 'text-red-400',     dot: 'bg-red-400'     },
+  'Power Automate': { bg: 'bg-cyan-500/10', text: 'text-cyan-400', dot: 'bg-cyan-400' },
 };
