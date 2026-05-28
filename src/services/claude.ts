@@ -42,17 +42,25 @@ export async function generateMigrationPlaybook(submission: Submission): Promise
   return parseOutput(rawOutput, submission);
 }
 
+/**
+ * Strip the output-parser format markers from user-supplied content to prevent
+ * prompt injection attacks that could manipulate the parsed playbook/import file.
+ */
+function sanitizeInput(text: string): string {
+  return text.replace(/---(?:BEGIN|END)\s+[A-Z\s]+---/gi, '[REMOVED]');
+}
+
 function buildPrompt({ source, destination, fileContent, fileName, description }: Submission): string {
   const isMigration = !!source;
 
   let context = '';
   if (fileContent) {
     const label = isMigration ? 'Source Workflow File' : 'Reference Workflow / Requirements';
-    context += `## ${label} (${fileName})\n\`\`\`\n${fileContent.substring(0, 15000)}\n\`\`\`\n\n`;
+    context += `## ${label} (${fileName})\n\`\`\`\n${sanitizeInput(fileContent).substring(0, 15000)}\n\`\`\`\n\n`;
   }
   if (description) {
     const label = isMigration ? 'Source Workflow Description' : 'Workflow Requirements';
-    context += `## ${label}\n${description}\n\n`;
+    context += `## ${label}\n${sanitizeInput(description)}\n\n`;
   }
 
   const intro = isMigration

@@ -10,7 +10,7 @@ export const config = {
   port: parseInt(process.env.PORT || '8080', 10),
   databasePath: process.env.DATABASE_PATH || path.join(process.cwd(), 'flowshift.db'),
 
-  anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
+  anthropicApiKey: required('ANTHROPIC_API_KEY'),
   claudeModel: process.env.CLAUDE_MODEL || 'claude-opus-4-7',
   maxTokens: parseInt(process.env.MAX_TOKENS || '8192', 10),
 

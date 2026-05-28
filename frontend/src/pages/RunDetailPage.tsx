@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import { api } from '../api';
 import type { Run } from '../types';
 import { PLATFORM_COLORS } from '../types';
@@ -60,8 +61,9 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function renderMarkdown(src: string): string {
-  const result = marked.parse(src);
-  return typeof result === 'string' ? result : '';
+  const raw = marked.parse(src);
+  const html = typeof raw === 'string' ? raw : '';
+  return DOMPurify.sanitize(html);
 }
 
 export function RunDetailPage() {

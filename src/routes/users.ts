@@ -6,11 +6,10 @@ import { config } from '../config';
 
 const router = Router();
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// ── helpers ───────────────────────────────────────────────────────────────────
 
 async function sendRecoveryEmail(toEmail: string, recoveryUrl: string): Promise<void> {
   if (!config.resendApiKey) {
-    // Dev fallback: log the link so local testing still works
     console.log(`[RECOVERY] No RESEND_API_KEY — recovery URL: ${recoveryUrl}`);
     return;
   }
@@ -62,6 +61,9 @@ router.post('/', async (req: Request, res: Response) => {
   if (!email || !email.includes('@')) {
     return res.status(400).json({ error: 'Valid email is required' });
   }
+  if (name && name.trim().length > 200) {
+    return res.status(400).json({ error: 'Name must be 200 characters or fewer' });
+  }
 
   const db = getDb();
   const normalizedEmail = email.trim().toLowerCase();
@@ -95,6 +97,8 @@ router.post('/recover', async (req: Request, res: Response) => {
 
   const db = getDb();
   const normalizedEmail = email.trim().toLowerCase();
+  // Always return the same message regardless of whether the email is registered
+  // (prevents account enumeration)
   const neutral = { message: 'If that email is registered, a recovery link has been sent.' };
 
   const result = await db.execute({
@@ -103,7 +107,6 @@ router.post('/recover', async (req: Request, res: Response) => {
   });
 
   if (!result.rows.length) {
-    // Don't reveal whether the email exists
     return res.json(neutral);
   }
 
@@ -121,10 +124,12 @@ router.post('/recover', async (req: Request, res: Response) => {
   try {
     await sendRecoveryEmail(normalizedEmail, recoveryUrl);
   } catch (err) {
+    // Log server-side but don't return a different status — exposing a 500 only
+    // for registered emails would let an attacker enumerate valid accounts.
     console.error('Failed to send recovery email:', err);
-    return res.status(500).json({ error: 'Could not send recovery email. Try again later.' });
   }
 
+  // Always return the neutral message — don't reveal send success/failure
   return res.json(neutral);
 });
 
@@ -133,35 +138,45 @@ router.get('/recover/:token', async (req: Request, res: Response) => {
   const { token } = req.params;
   const db = getDb();
 
-  const result = await db.execute({
-    sql: 'SELECT * FROM recovery_tokens WHERE token = ? AND used = 0',
+  // Atomic conditional UPDATE — only one concurrent request can get rowsAffected === 1.
+  // This simultaneously checks existence, used status, and expiry in a single statement,
+  // preventing the TOCTOU race condition of separate SELECT + UPDATE queries.
+  const markUsed = await db.execute({
+    sql: `UPDATE recovery_tokens
+          SET used = 1
+          WHERE token = ? AND used = 0 AND expires_at > datetime('now')`,
     args: [token],
   });
 
-  if (!result.rows.length) {
-    return res.status(400).json({ error: 'Invalid or already-used recovery link.' });
+  if (markUsed.rowsAffected === 0) {
+    return res.status(400).json({ error: 'Invalid, already-used, or expired recovery link.' });
   }
 
-  const row = result.rows[0];
-  if (new Date(row.expires_at as string) < new Date()) {
-    return res.status(400).json({ error: 'Recovery link has expired. Request a new one.' });
-  }
+  // Fetch the user_id now that we know we atomically claimed this token
+  const tokenData = await db.execute({
+    sql: 'SELECT user_id FROM recovery_tokens WHERE token = ?',
+    args: [token],
+  });
 
+  const userId = tokenData.rows[0].user_id as string;
+
+  // Rotate API key
   const newApiKey = uuidv4();
-
-  await db.execute({
-    sql: 'UPDATE recovery_tokens SET used = 1 WHERE token = ?',
-    args: [token],
-  });
-
   await db.execute({
     sql: 'UPDATE users SET api_key = ? WHERE id = ?',
-    args: [newApiKey, row.user_id],
+    args: [newApiKey, userId],
   });
+
+  // Prune stale tokens for this user (used ones + expired ones)
+  await db.execute({
+    sql: `DELETE FROM recovery_tokens
+          WHERE user_id = ? AND (used = 1 OR expires_at <= datetime('now'))`,
+    args: [userId],
+  }).catch((e) => console.error('Token pruning failed (non-fatal):', e));
 
   const userResult = await db.execute({
     sql: 'SELECT id, email, name FROM users WHERE id = ?',
-    args: [row.user_id],
+    args: [userId],
   });
 
   const user = userResult.rows[0];
