@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -72,17 +72,33 @@ export function RunDetailPage() {
   const [loading, setLoading]   = useState(true);
   const [tab, setTab]           = useState<'playbook' | 'import'>('playbook');
   const [copied, setCopied]     = useState(false);
+  const [pollTimedOut, setPollTimedOut] = useState(false);
+  const pollCount = useRef(0);
 
+  // Initial load with AbortController so navigating away cleans up the fetch
   useEffect(() => {
     if (!id) return;
-    api.getRun(id).then(setRun).catch(console.error).finally(() => setLoading(false));
+    const controller = new AbortController();
+    api.getRun(id)
+      .then(r => { if (!controller.signal.aborted) setRun(r); })
+      .catch(e => { if (!controller.signal.aborted) console.error(e); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, [id]);
 
-  // Poll while run is in-flight
+  // Poll while run is in-flight — stops after ~10 min (200 × 3 s) to avoid infinite loops
   useEffect(() => {
     if (!id || !run) return;
     if (run.status !== 'pending' && run.status !== 'processing') return;
+    if (pollCount.current >= 200) { setPollTimedOut(true); return; }
+
     const timer = setInterval(() => {
+      pollCount.current++;
+      if (pollCount.current >= 200) {
+        clearInterval(timer);
+        setPollTimedOut(true);
+        return;
+      }
       api.getRun(id).then(setRun).catch(console.error);
     }, 3000);
     return () => clearInterval(timer);
@@ -215,11 +231,24 @@ export function RunDetailPage() {
 
         {/* In-flight state */}
         {(run.status === 'processing' || run.status === 'pending') && (
-          <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-10 text-center">
-            <div className="w-10 h-10 border-2 border-amber-500/30 border-t-amber-400 rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-amber-400 font-semibold">Processing your migration…</p>
-            <p className="text-amber-400/50 text-sm mt-1">Usually takes 30–60 seconds. This page will auto-update.</p>
-          </div>
+          pollTimedOut ? (
+            <div className="bg-slate-800/50 border border-white/8 rounded-xl p-10 text-center">
+              <p className="text-slate-300 font-semibold mb-2">This is taking longer than expected</p>
+              <p className="text-slate-500 text-sm mb-4">Auto-polling stopped after 10 minutes. Refresh the page to check for an update.</p>
+              <button
+                onClick={() => { pollCount.current = 0; setPollTimedOut(false); api.getRun(id!).then(setRun).catch(console.error); }}
+                className="px-5 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm transition-colors"
+              >
+                Check now
+              </button>
+            </div>
+          ) : (
+            <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-10 text-center">
+              <div className="w-10 h-10 border-2 border-amber-500/30 border-t-amber-400 rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-amber-400 font-semibold">Processing your migration…</p>
+              <p className="text-amber-400/50 text-sm mt-1">Usually takes 30–60 seconds. This page will auto-update.</p>
+            </div>
+          )
         )}
 
         {/* Failed state */}

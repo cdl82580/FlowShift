@@ -1,9 +1,11 @@
-import { google } from 'googleapis';
+import { google, drive_v3 } from 'googleapis';
 import { Readable } from 'stream';
 import { config } from '../config';
 import { getDb } from '../db';
 
-async function getDriveClient() {
+// ── Client factory — call once per run, then pass the instance through ────────
+
+export async function getDriveClient(): Promise<drive_v3.Drive> {
   const db = getDb();
   const result = await db.execute({
     sql: "SELECT value FROM settings WHERE key = 'drive_refresh_token'",
@@ -24,7 +26,10 @@ async function getDriveClient() {
   return google.drive({ version: 'v3', auth });
 }
 
+// ── Drive operations — each accepts a pre-created client ─────────────────────
+
 export async function getOrCreateUserFolder(
+  drive: drive_v3.Drive,
   userEmail: string,
   existingFolderId: string | null
 ): Promise<{ folderId: string; folderUrl: string }> {
@@ -34,8 +39,6 @@ export async function getOrCreateUserFolder(
       folderUrl: `https://drive.google.com/drive/folders/${existingFolderId}`,
     };
   }
-
-  const drive = await getDriveClient();
 
   const folder = await drive.files.create({
     requestBody: {
@@ -60,11 +63,10 @@ export async function getOrCreateUserFolder(
 }
 
 export async function createRunFolder(
+  drive: drive_v3.Drive,
   userFolderId: string,
   runId: string
 ): Promise<{ folderId: string; folderUrl: string }> {
-  const drive = await getDriveClient();
-
   const folder = await drive.files.create({
     requestBody: {
       name: `run_${runId}`,
@@ -88,13 +90,12 @@ export async function createRunFolder(
 }
 
 export async function uploadFile(
+  drive: drive_v3.Drive,
   folderId: string,
   fileName: string,
   content: string,
   mimeType = 'text/plain'
 ): Promise<string> {
-  const drive = await getDriveClient();
-
   const file = await drive.files.create({
     requestBody: {
       name: fileName,

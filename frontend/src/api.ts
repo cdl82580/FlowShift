@@ -1,4 +1,4 @@
-import type { User, Run, RunSummary } from './types';
+import type { User, RegisterResponse, Run, RunSummary } from './types';
 
 function getApiKey(): string {
   try {
@@ -29,7 +29,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 export const api = {
   register: (email: string, name?: string) =>
-    request<User & { api_key: string }>('/users', {
+    request<RegisterResponse>('/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, name }),

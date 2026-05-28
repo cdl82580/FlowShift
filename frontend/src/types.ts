@@ -1,3 +1,8 @@
+/** Returned only from POST /api/users — api_key is shown once and never again */
+export interface RegisterResponse extends User {
+  api_key: string;
+}
+
 export interface User {
   id: string;
   email: string;

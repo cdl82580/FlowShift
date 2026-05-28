@@ -10,16 +10,21 @@ export const config = {
   port: parseInt(process.env.PORT || '8080', 10),
   databasePath: process.env.DATABASE_PATH || path.join(process.cwd(), 'flowshift.db'),
 
+  // ── Required ───────────────────────────────────────────────────────────────
   anthropicApiKey: required('ANTHROPIC_API_KEY'),
+
+  // ── Optional — Claude model tuning (sensible defaults) ────────────────────
   claudeModel: process.env.CLAUDE_MODEL || 'claude-opus-4-7',
   maxTokens: parseInt(process.env.MAX_TOKENS || '8192', 10),
 
+  // ── Optional — Email recovery via Resend (recovery flow disabled if unset) ─
   resendApiKey: process.env.RESEND_API_KEY || '',
-  fromEmail: process.env.FROM_EMAIL || 'noreply@flowshift.io',
+  fromEmail:    process.env.FROM_EMAIL    || 'noreply@flowshift.io',
 
-  googleOauthClientId: process.env.GOOGLE_OAUTH_CLIENT_ID || '',
+  // ── Optional — Google Drive output (Drive uploads disabled if unset) ───────
+  googleOauthClientId:     process.env.GOOGLE_OAUTH_CLIENT_ID     || '',
   googleOauthClientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET || '',
-  gdriveParentFolderId: process.env.GDRIVE_PARENT_FOLDER_ID || '11BCUCoM3a0di8tYiz-r9EOuQ7AZlt7FU',
+  gdriveParentFolderId:    process.env.GDRIVE_PARENT_FOLDER_ID    || '11BCUCoM3a0di8tYiz-r9EOuQ7AZlt7FU',
   appUrl: process.env.APP_URL || 'https://flowshift-cdl.fly.dev',
 
   driveEnabled: !!(process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET),

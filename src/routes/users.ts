@@ -1,8 +1,18 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import rateLimit from 'express-rate-limit';
 import { getDb } from '../db';
 import { requireApiKey, AuthedRequest } from '../auth';
 import { config } from '../config';
+
+// Stricter limit for the recovery endpoint specifically — prevents email flooding
+const recoverLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many recovery requests — please wait 15 minutes.' },
+});
 
 const router = Router();
 
@@ -88,7 +98,7 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // POST /api/users/recover — request a recovery email
-router.post('/recover', async (req: Request, res: Response) => {
+router.post('/recover', recoverLimiter, async (req: Request, res: Response) => {
   const { email } = req.body as { email?: string };
 
   if (!email || !email.includes('@')) {
@@ -210,15 +220,18 @@ router.get('/:id/runs', requireApiKey, async (req: Request, res: Response) => {
     return res.status(403).json({ error: 'Forbidden' });
   }
 
+  const limit  = Math.min(Math.max(parseInt(req.query.limit  as string || '50',  10), 1), 500);
+  const offset = Math.max(parseInt(req.query.offset as string || '0', 10), 0);
+
   const db = getDb();
   const result = await db.execute({
     sql: `SELECT id, source, destination, status, original_filename,
                  gdrive_run_folder_url, error_message, created_at, completed_at
-          FROM runs WHERE user_id = ? ORDER BY created_at DESC`,
-    args: [req.params.id],
+          FROM runs WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    args: [req.params.id, limit, offset],
   });
 
-  return res.json({ runs: result.rows });
+  return res.json({ runs: result.rows, limit, offset });
 });
 
 export default router;

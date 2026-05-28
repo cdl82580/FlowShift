@@ -26,6 +26,11 @@ primary_region = "iad"
     timeout = "5s"
     path = "/health"
 
+[vm]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
+
 [[mounts]]
   source = "flowshift_data"
   destination = "/data"

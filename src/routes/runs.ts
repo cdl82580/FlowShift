@@ -4,7 +4,7 @@ import { Client } from '@libsql/client';
 import { getDb } from '../db';
 import { requireApiKey, AuthedRequest, UserRow } from '../auth';
 import { generateMigrationPlaybook, VALID_PLATFORMS } from '../services/claude';
-import { getOrCreateUserFolder, createRunFolder, uploadFile } from '../services/drive';
+import { getDriveClient, getOrCreateUserFolder, createRunFolder, uploadFile } from '../services/drive';
 import { config } from '../config';
 
 const router = Router();
@@ -101,13 +101,19 @@ async function processRun({ runId, user, db, submission }: ProcessRunArgs): Prom
 
     if (config.driveEnabled) {
       try {
-        // Re-fetch user to get latest gdrive_folder_id (may have been set by a concurrent run)
-        const userRow = await db.execute({ sql: 'SELECT * FROM users WHERE id = ?', args: [user.id] });
+        // Create one Drive client for the entire upload sequence (one DB read, one OAuth2 instance)
+        const drive = await getDriveClient();
+
+        // Re-fetch only the needed column to get latest gdrive_folder_id
+        // (may have been set by a concurrent run since the request started)
+        const userRow = await db.execute({
+          sql: 'SELECT gdrive_folder_id FROM users WHERE id = ?',
+          args: [user.id],
+        });
         const latestFolderId = (userRow.rows[0]?.gdrive_folder_id as string | null) ?? null;
 
         const { folderId: userFolderId, folderUrl: userFolderUrl } = await getOrCreateUserFolder(
-          user.email,
-          latestFolderId
+          drive, user.email, latestFolderId
         );
 
         if (!latestFolderId) {
@@ -117,15 +123,15 @@ async function processRun({ runId, user, db, submission }: ProcessRunArgs): Prom
           });
         }
 
-        const runFolder = await createRunFolder(userFolderId, runId);
+        const runFolder = await createRunFolder(drive, userFolderId, runId);
         runFolderId = runFolder.folderId;
         runFolderUrl = runFolder.folderUrl;
 
-        await uploadFile(runFolderId, 'playbook.md', result.playbookText, 'text/markdown');
+        await uploadFile(drive, runFolderId, 'playbook.md', result.playbookText, 'text/markdown');
 
         if (result.importFileContent && result.importFileName) {
           const mime = result.importFileExtension === 'json' ? 'application/json' : 'text/plain';
-          await uploadFile(runFolderId, result.importFileName, result.importFileContent, mime);
+          await uploadFile(drive, runFolderId, result.importFileName, result.importFileContent, mime);
         }
       } catch (driveErr: unknown) {
         console.error(`Run ${runId}: Drive upload failed (run still saved):`, driveErr);

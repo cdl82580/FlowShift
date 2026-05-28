@@ -48,15 +48,6 @@ app.use(express.urlencoded({ extended: true }));
 // ── Rate limiters ─────────────────────────────────────────────────────────────
 const tooManyRequests = { error: 'Too many requests — please slow down.' };
 
-/** Recovery email: max 5 requests per 15 min per IP */
-const recoverLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: tooManyRequests,
-});
-
 /** Run creation: max 20 per hour per API key (keyed on X-API-Key, falls back to IP) */
 const runsLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -85,9 +76,8 @@ app.get('/health', (_req, res) => {
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/auth', authRouter);
-app.use('/api/users',         registerLimiter, usersRouter);
-app.post('/api/users/recover', recoverLimiter); // extra guard on the recovery sub-route
-app.use('/api/runs',          runsLimiter,     runsRouter);
+app.use('/api/users', registerLimiter, usersRouter); // recoverLimiter is applied inside usersRouter
+app.use('/api/runs',  runsLimiter,    runsRouter);
 
 // ── SPA fallback ──────────────────────────────────────────────────────────────
 app.get('*', (_req, res) => {

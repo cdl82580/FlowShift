@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../api';
+import { Logo } from '../components/Logo';
 
 export function RecoverPage() {
   const [params] = useSearchParams();
@@ -11,6 +12,9 @@ export function RecoverPage() {
   const [email, setEmail]     = useState('');
   const [error, setError]     = useState('');
   const [copied, setCopied]   = useState(false);
+  // Guard against React StrictMode double-invoke: the effect fires twice in dev,
+  // which would burn the single-use token and show an error on the second call.
+  const redeemed = useRef(false);
 
   useEffect(() => {
     if (!token) {
@@ -18,12 +22,13 @@ export function RecoverPage() {
       setError('No recovery token found in the URL. Check your email and try the link again.');
       return;
     }
+    if (redeemed.current) return;
+    redeemed.current = true;
 
     api.redeemRecovery(token)
       .then(data => {
         setApiKey(data.api_key);
         setEmail(data.email);
-        // Sign the user in immediately with the new key
         localStorage.setItem('flowshift_auth', JSON.stringify({
           userId: data.id,
           apiKey: data.api_key,
@@ -47,15 +52,7 @@ export function RecoverPage() {
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-8">
       <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="flex items-center gap-2.5 mb-8">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          <span className="text-xl font-bold text-white tracking-tight">FlowShift</span>
-        </div>
+        <div className="mb-8"><Logo /></div>
 
         {status === 'loading' && (
           <div className="bg-slate-900 border border-white/5 rounded-2xl p-8 text-center">

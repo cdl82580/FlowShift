@@ -1,17 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
-
-const Logo = () => (
-  <div className="flex items-center gap-2.5">
-    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-      <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-      </svg>
-    </div>
-    <span className="text-xl font-bold text-white tracking-tight">FlowShift</span>
-  </div>
-);
+import { PLATFORMS } from '../types';
+import { Logo } from '../components/Logo';
 
 type Tab = 'register' | 'signin' | 'recover';
 
@@ -40,7 +31,7 @@ export function AuthPage() {
       const user = await api.register(email.trim(), name.trim() || undefined);
       localStorage.setItem('flowshift_auth', JSON.stringify({
         userId: user.id,
-        apiKey: (user as unknown as Record<string, string>).api_key,
+        apiKey: user.api_key,
         email: user.email,
         name: user.name,
       }));
@@ -57,9 +48,14 @@ export function AuthPage() {
     setError('');
     setLoading(true);
     const trimmed = apiKey.trim();
+    // Temporarily write partial auth so getMe() can read the key.
+    // We restore the previous value on failure so a bad key attempt
+    // doesn't leave a malformed record in storage.
+    const previous = localStorage.getItem('flowshift_auth');
     localStorage.setItem('flowshift_auth', JSON.stringify({ apiKey: trimmed, userId: '', email: '', name: null }));
     try {
       const user = await api.getMe();
+      // Overwrite with complete, valid auth only after confirmed success
       localStorage.setItem('flowshift_auth', JSON.stringify({
         userId: user.id,
         apiKey: trimmed,
@@ -68,7 +64,8 @@ export function AuthPage() {
       }));
       navigate('/');
     } catch (err) {
-      localStorage.removeItem('flowshift_auth');
+      if (previous) localStorage.setItem('flowshift_auth', previous);
+      else localStorage.removeItem('flowshift_auth');
       setError(err instanceof Error ? err.message : 'Sign in failed — check your API key');
     } finally {
       setLoading(false);
@@ -113,7 +110,7 @@ export function AuthPage() {
             Describe your automation. Get a full migration playbook and ready-to-import workflow file — powered by Claude.
           </p>
           <div className="mt-10 flex flex-wrap gap-2">
-            {['n8n', 'Make', 'Zapier', 'Tray', 'Boomi', 'Workato', 'Celigo'].map(p => (
+            {PLATFORMS.map(p => (
               <span key={p} className="px-3.5 py-1.5 bg-white/5 border border-white/8 rounded-full text-slate-400 text-sm font-medium">
                 {p}
               </span>

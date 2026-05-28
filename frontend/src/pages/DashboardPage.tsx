@@ -3,11 +3,17 @@ import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api';
 import type { RunSummary } from '../types';
 import { PLATFORM_COLORS } from '../types';
+import { Logo } from '../components/Logo';
+
+function getAuth() {
+  try { return JSON.parse(localStorage.getItem('flowshift_auth') || '{}'); }
+  catch { return {}; }
+}
 
 function ApiKeyBanner() {
   const [visible, setVisible]   = useState(false);
   const [copied,  setCopied]    = useState(false);
-  const auth = JSON.parse(localStorage.getItem('flowshift_auth') || '{}');
+  const auth = getAuth();
   const key: string = auth.apiKey || '';
 
   function copy() {
@@ -33,11 +39,6 @@ function ApiKeyBanner() {
       </button>
     </div>
   );
-}
-
-function getAuth() {
-  try { return JSON.parse(localStorage.getItem('flowshift_auth') || '{}'); }
-  catch { return {}; }
 }
 
 export function PlatformBadge({ name }: { name: string }) {
@@ -115,14 +116,7 @@ export function DashboardPage() {
       {/* Nav */}
       <header className="sticky top-0 z-20 border-b border-white/5 bg-slate-950/80 backdrop-blur-sm">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <span className="font-bold text-white text-sm tracking-tight">FlowShift</span>
-          </div>
+          <Logo size="sm" />
           <div className="flex items-center gap-4">
             <span className="text-slate-600 text-xs hidden sm:block truncate max-w-[180px]">{auth?.email}</span>
             <button onClick={signOut} className="text-slate-500 hover:text-slate-300 text-xs transition-colors">
