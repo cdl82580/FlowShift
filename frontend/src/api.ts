@@ -48,4 +48,16 @@ export const api = {
     }),
 
   getRun: (id: string) => request<Run>(`/runs/${id}`),
+
+  requestRecovery: (email: string) =>
+    request<{ message: string }>('/users/recover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    }),
+
+  redeemRecovery: (token: string) =>
+    request<{ api_key: string; id: string; email: string; name: string | null }>(
+      `/users/recover/${token}`
+    ),
 };

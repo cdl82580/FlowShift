@@ -14,6 +14,9 @@ export const config = {
   claudeModel: process.env.CLAUDE_MODEL || 'claude-opus-4-7',
   maxTokens: parseInt(process.env.MAX_TOKENS || '8192', 10),
 
+  resendApiKey: process.env.RESEND_API_KEY || '',
+  fromEmail: process.env.FROM_EMAIL || 'noreply@flowshift.io',
+
   googleOauthClientId: process.env.GOOGLE_OAUTH_CLIENT_ID || '',
   googleOauthClientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET || '',
   gdriveParentFolderId: process.env.GDRIVE_PARENT_FOLDER_ID || '11BCUCoM3a0di8tYiz-r9EOuQ7AZlt7FU',

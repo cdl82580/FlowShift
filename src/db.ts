@@ -41,6 +41,14 @@ export async function initDb(): Promise<void> {
       completed_at          TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS recovery_tokens (
+      token      TEXT PRIMARY KEY,
+      user_id    TEXT NOT NULL REFERENCES users(id),
+      expires_at TEXT NOT NULL,
+      used       INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS settings (
       key        TEXT PRIMARY KEY,
       value      TEXT NOT NULL,

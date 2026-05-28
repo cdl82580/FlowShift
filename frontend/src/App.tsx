@@ -3,6 +3,7 @@ import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { NewRunPage } from './pages/NewRunPage';
 import { RunDetailPage } from './pages/RunDetailPage';
+import { RecoverPage } from './pages/RecoverPage';
 
 function isAuthenticated(): boolean {
   try {
@@ -22,6 +23,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/recover" element={<RecoverPage />} />
         <Route path="/" element={<Guard><DashboardPage /></Guard>} />
         <Route path="/runs/new" element={<Guard><NewRunPage /></Guard>} />
         <Route path="/runs/:id" element={<Guard><RunDetailPage /></Guard>} />

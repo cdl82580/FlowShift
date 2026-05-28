@@ -13,14 +13,24 @@ const Logo = () => (
   </div>
 );
 
+type Tab = 'register' | 'signin' | 'recover';
+
 export function AuthPage() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<'register' | 'signin'>('register');
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [apiKey, setApiKey] = useState('');
+  const [tab, setTab]         = useState<Tab>('register');
+  const [email, setEmail]     = useState('');
+  const [name, setName]       = useState('');
+  const [apiKey, setApiKey]   = useState('');
+  const [recoverEmail, setRecoverEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]     = useState('');
+  const [recoverSent, setRecoverSent] = useState(false);
+
+  function switchTab(t: Tab) {
+    setTab(t);
+    setError('');
+    setRecoverSent(false);
+  }
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -65,6 +75,20 @@ export function AuthPage() {
     }
   }
 
+  async function handleRecover(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      await api.requestRecovery(recoverEmail.trim());
+      setRecoverSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Recovery request failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const inputCls =
     'w-full bg-slate-900 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/70 transition-colors text-sm';
   const btnCls =
@@ -103,20 +127,22 @@ export function AuthPage() {
         <div className="w-full max-w-sm">
           <div className="lg:hidden mb-8"><Logo /></div>
 
-          {/* Tab switcher */}
-          <div className="flex bg-slate-900 border border-white/8 rounded-xl p-1 mb-8">
-            {(['register', 'signin'] as const).map(t => (
-              <button
-                key={t}
-                onClick={() => { setTab(t); setError(''); }}
-                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
-                  tab === t ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'
-                }`}
-              >
-                {t === 'register' ? 'Register' : 'Sign In'}
-              </button>
-            ))}
-          </div>
+          {/* Tab switcher — only Register / Sign In visible */}
+          {tab !== 'recover' && (
+            <div className="flex bg-slate-900 border border-white/8 rounded-xl p-1 mb-8">
+              {(['register', 'signin'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => switchTab(t)}
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+                    tab === t ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  {t === 'register' ? 'Register' : 'Sign In'}
+                </button>
+              ))}
+            </div>
+          )}
 
           {error && (
             <div className="mb-5 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
@@ -124,7 +150,8 @@ export function AuthPage() {
             </div>
           )}
 
-          {tab === 'register' ? (
+          {/* ── Register ── */}
+          {tab === 'register' && (
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1.5">Email</label>
@@ -144,7 +171,10 @@ export function AuthPage() {
                   : 'Create account →'}
               </button>
             </form>
-          ) : (
+          )}
+
+          {/* ── Sign In ── */}
+          {tab === 'signin' && (
             <form onSubmit={handleSignIn} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1.5">API Key</label>
@@ -157,14 +187,84 @@ export function AuthPage() {
                   ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Signing in…</>
                   : 'Sign in →'}
               </button>
+              <p className="text-center pt-1">
+                <button
+                  type="button"
+                  onClick={() => switchTab('recover')}
+                  className="text-xs text-slate-500 hover:text-indigo-400 transition-colors underline"
+                >
+                  Forgot your API key?
+                </button>
+              </p>
             </form>
           )}
 
-          <p className="mt-6 text-xs text-slate-600 text-center">
-            {tab === 'register'
-              ? 'Your API key is shown once after registration — save it.'
-              : 'Your API key was returned when you first registered.'}
-          </p>
+          {/* ── Recover ── */}
+          {tab === 'recover' && (
+            <div>
+              <button
+                onClick={() => switchTab('signin')}
+                className="flex items-center gap-1.5 text-slate-500 hover:text-slate-300 text-sm mb-6 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to sign in
+              </button>
+
+              {recoverSent ? (
+                <div className="text-center py-4">
+                  <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <p className="text-white font-semibold mb-2">Check your email</p>
+                  <p className="text-slate-400 text-sm leading-relaxed">
+                    If <span className="text-slate-300">{recoverEmail}</span> is registered,
+                    a recovery link is on its way. The link expires in 15 minutes.
+                  </p>
+                  <button
+                    onClick={() => { setRecoverSent(false); setRecoverEmail(''); }}
+                    className="mt-5 text-xs text-slate-500 hover:text-slate-300 underline transition-colors"
+                  >
+                    Try a different email
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleRecover} className="space-y-4">
+                  <div>
+                    <p className="text-slate-400 text-sm mb-4 leading-relaxed">
+                      Enter your registered email and we'll send a recovery link that generates a new API key.
+                    </p>
+                    <label className="block text-sm font-medium text-slate-400 mb-1.5">Email</label>
+                    <input
+                      type="email"
+                      value={recoverEmail}
+                      onChange={e => setRecoverEmail(e.target.value)}
+                      required
+                      placeholder="you@example.com"
+                      className={inputCls}
+                    />
+                  </div>
+                  <button type="submit" disabled={loading} className={btnCls}>
+                    {loading
+                      ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Sending…</>
+                      : 'Send recovery link →'}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* Footer hint */}
+          {tab !== 'recover' && (
+            <p className="mt-6 text-xs text-slate-600 text-center">
+              {tab === 'register'
+                ? 'Your API key is shown once after registration — save it.'
+                : 'Your API key was returned when you first registered.'}
+            </p>
+          )}
         </div>
       </div>
     </div>
