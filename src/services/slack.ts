@@ -343,15 +343,17 @@ async function uploadFileToSlack(
 // ── Run list / status formatting ──────────────────────────────────────────────
 
 export function formatRunSummary(run: Record<string, unknown>): string {
-  const source = run.source as string | null;
-  const dest   = run.destination as string;
-  const status = run.status as string;
-  const id     = run.id as string;
-  const created = new Date(run.created_at as string).toLocaleDateString(undefined, {
+  const source   = run.source as string | null;
+  const dest     = run.destination as string;
+  const status   = run.status as string;
+  const id       = run.id as string;
+  const driveUrl = run.gdrive_run_folder_url as string | null;
+  const created  = new Date(run.created_at as string).toLocaleDateString(undefined, {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 
   const statusEmoji = { completed: '✅', processing: '⏳', pending: '🕐', failed: '❌' }[status] ?? '❓';
-  const route = source ? `${source} → ${dest}` : `Build Guide → ${dest}`;
-  return `${statusEmoji} *${route}* — ID: ${id} — ${created}`;
+  const route     = source ? `${source} → ${dest}` : `Build Guide → ${dest}`;
+  const driveLink = driveUrl ? ` · <${driveUrl}|📂 Drive>` : '';
+  return `${statusEmoji} *${route}* — ID: ${id} — ${created}${driveLink}`;
 }

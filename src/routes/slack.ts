@@ -242,7 +242,7 @@ router.post('/commands', requireSlackSignature, async (req: Request, res: Respon
     // ── /flowshift list ───────────────────────────────────────────────────────
     if (text === 'list') {
       const runs = await db.execute({
-        sql: `SELECT id, source, destination, status, created_at
+        sql: `SELECT id, source, destination, status, created_at, gdrive_run_folder_url
               FROM runs WHERE user_id = ? ORDER BY created_at DESC LIMIT 5`,
         args: [flowshiftUserId],
       });
