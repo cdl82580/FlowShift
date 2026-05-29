@@ -76,6 +76,47 @@ const PLATFORM_OPTIONS = VALID_PLATFORMS.map(p => ({
   value: p,
 }));
 
+export function buildRegisterModal() {
+  return {
+    type: 'modal' as const,
+    callback_id: 'flowshift_register',
+    title: { type: 'plain_text' as const, text: 'Create Account', emoji: true },
+    submit: { type: 'plain_text' as const, text: 'Create Account →', emoji: true },
+    close:  { type: 'plain_text' as const, text: 'Cancel' },
+    blocks: [
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: 'Create a FlowShift account. Your API key will be sent to you as a DM — save it somewhere safe.',
+        },
+      },
+      { type: 'divider' },
+      {
+        type: 'input',
+        block_id: 'email_block',
+        label: { type: 'plain_text' as const, text: 'Email Address' },
+        element: {
+          type: 'plain_text_input' as const,
+          action_id: 'email',
+          placeholder: { type: 'plain_text' as const, text: 'you@example.com' },
+        },
+      },
+      {
+        type: 'input',
+        block_id: 'name_block',
+        optional: true,
+        label: { type: 'plain_text' as const, text: 'Name' },
+        element: {
+          type: 'plain_text_input' as const,
+          action_id: 'name',
+          placeholder: { type: 'plain_text' as const, text: 'Your name (optional)' },
+        },
+      },
+    ],
+  };
+}
+
 export function buildNewRunModal() {
   return {
     type: 'modal' as const,

@@ -23,6 +23,7 @@ import {
   linkSlackUser,
   getUserByApiKey,
   buildNewRunModal,
+  buildRegisterModal,
   sendProcessingMessage,
   formatRunSummary,
 } from '../services/slack';
@@ -108,16 +109,79 @@ router.post('/commands', requireSlackSignature, async (req: Request, res: Respon
           text: {
             type: 'mrkdwn',
             text: '*FlowShift — iPaaS Migration Playbook Generator* ⚡\n\n' +
-              '*Commands:*\n' +
+              '*Getting started:*\n' +
+              '• `/flowshift register` — create a new FlowShift account from Slack\n' +
+              '• `/flowshift link <api-key>` — link an existing FlowShift account\n' +
+              '• `/flowshift forgot <email>` — email yourself a new API key\n\n' +
+              '*Migrations:*\n' +
               '• `/flowshift` or `/flowshift new` — open the migration form\n' +
               '• `/flowshift list` — show your last 5 runs\n' +
-              '• `/flowshift status <run-id>` — check status of a specific run\n' +
-              '• `/flowshift link <api-key>` — link your FlowShift account\n' +
+              '• `/flowshift status <run-id>` — check status of a specific run\n\n' +
+              '*Account:*\n' +
               '• `/flowshift unlink` — unlink your account from Slack\n' +
               '• `/flowshift help` — show this message\n\n' +
               `*Web app:* <${config.appUrl}|${config.appUrl}>`,
           },
         }],
+      });
+      return;
+    }
+
+    // ── /flowshift register — open registration modal ────────────────────────
+    if (text === 'register') {
+      await slack.views.open({ trigger_id: triggerId, view: buildRegisterModal() });
+      return;
+    }
+
+    // ── /flowshift forgot <email> — trigger recovery email ────────────────────
+    if (text.startsWith('forgot')) {
+      const parts = text.split(/\s+/);
+      const email  = parts[1]?.trim().toLowerCase();
+      if (!email || !email.includes('@')) {
+        await reply(responseUrl, {
+          text: 'Usage: `/flowshift forgot your@email.com`\n\nWe\'ll send a link to reset your API key.',
+        });
+        return;
+      }
+
+      // Reuse the same recovery logic as the REST API (neutral response either way)
+      const db2 = getDb();
+      const userRow = await db2.execute({
+        sql: 'SELECT id FROM users WHERE email = ?',
+        args: [email],
+      });
+
+      if (userRow.rows.length) {
+        const userId  = userRow.rows[0].id as string;
+        const token   = (await import('uuid')).v4();
+        const expires = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+        await db2.execute({
+          sql: 'INSERT INTO recovery_tokens (token, user_id, expires_at) VALUES (?, ?, ?)',
+          args: [token, userId, expires],
+        });
+        const recoveryUrl = `${config.appUrl}/recover?token=${token}`;
+        // sendRecoveryEmail is not exported — inline a minimal version
+        if (config.resendApiKey) {
+          await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${config.resendApiKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              from: `FlowShift <${config.fromEmail}>`,
+              to:   [email],
+              subject: 'Your FlowShift API key recovery link',
+              html: `<p>Click the link below to get a new API key (valid 15 minutes, one-time use):</p>
+                     <p><a href="${recoveryUrl}" style="background:#4f46e5;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">Reset my API key</a></p>
+                     <p>If you didn't request this, ignore this email.</p>`,
+            }),
+          }).catch(e => console.error('[slack/forgot] email send failed:', e));
+        } else {
+          console.log(`[slack/forgot] recovery URL for ${email}: ${recoveryUrl}`);
+        }
+      }
+
+      // Always neutral — don't reveal whether email is registered
+      await reply(responseUrl, {
+        text: `📧 If *${email}* is registered, a recovery link is on its way.\nClick it to get a new API key, then \`/flowshift link <key>\` to reconnect.`,
       });
       return;
     }
@@ -262,6 +326,81 @@ router.post('/interactions', requireSlackSignature, async (req: Request, res: Re
   res.status(200).send();
 
   if (payload.type !== 'view_submission') return;
+
+  const slack = getSlackClient();
+
+  // ── Registration modal ────────────────────────────────────────────────────
+  if (payload.view?.callback_id === 'flowshift_register') {
+    const slackUserId = payload.user?.id as string;
+    const workspaceId = (payload.team?.id ?? payload.user?.team_id) as string;
+    const values  = payload.view?.state?.values as Record<string, any>;
+    const email   = (values?.email_block?.email?.value as string || '').trim().toLowerCase();
+    const name    = (values?.name_block?.name?.value  as string || '').trim() || null;
+
+    const dmResult  = await slack.conversations.open({ users: slackUserId });
+    const channelId = (dmResult.channel as any)?.id as string;
+    if (!channelId) return;
+
+    if (!email || !email.includes('@')) {
+      await slack.chat.postMessage({ channel: channelId,
+        text: '❌ Please provide a valid email address.' });
+      return;
+    }
+
+    const db    = getDb();
+    const { v4: uuid } = await import('uuid');
+
+    const existing = await db.execute({
+      sql: 'SELECT id FROM users WHERE email = ?',
+      args: [email],
+    });
+    if (existing.rows.length) {
+      await slack.chat.postMessage({ channel: channelId,
+        text: `❌ *${email}* is already registered.\n\n` +
+          `Use \`/flowshift forgot ${email}\` to recover your API key, ` +
+          `then \`/flowshift link <key>\` to connect your Slack account.` });
+      return;
+    }
+
+    const userId = uuid();
+    const apiKey = uuid();
+    await db.execute({
+      sql: 'INSERT INTO users (id, email, name, api_key) VALUES (?, ?, ?, ?)',
+      args: [userId, email, name, apiKey],
+    });
+
+    await linkSlackUser(db, slackUserId, workspaceId, userId);
+
+    await slack.chat.postMessage({
+      channel: channelId,
+      text: '✅ FlowShift account created',
+      blocks: [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `✅ *FlowShift account created!*\n\n*Email:* ${email}`,
+          },
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*Your API key — save this somewhere safe, it won't be shown again:*\n\`${apiKey}\``,
+          },
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `Your Slack account has been automatically linked. Type \`/flowshift\` to start your first migration! 🚀`,
+          },
+        },
+      ],
+    });
+    return;
+  }
+
   if (payload.view?.callback_id !== 'flowshift_new_run') return;
 
   const slackUserId = payload.user?.id as string;
@@ -275,8 +414,7 @@ router.post('/interactions', requireSlackSignature, async (req: Request, res: Re
   const uploadedFiles: Array<{ id: string; name: string }> =
     values?.file_block?.workflow_file?.files ?? [];
 
-  const slack = getSlackClient();
-  const db    = getDb();
+  const db = getDb();
 
   // Open a DM channel with the user for result delivery
   const dmResult = await slack.conversations.open({ users: slackUserId });
