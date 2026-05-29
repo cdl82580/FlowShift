@@ -305,7 +305,5 @@ export function formatRunSummary(run: Record<string, unknown>): string {
 
   const statusEmoji = { completed: '✅', processing: '⏳', pending: '🕐', failed: '❌' }[status] ?? '❓';
   const route = source ? `${source} → ${dest}` : `Build Guide → ${dest}`;
-  // Show ID without backtick formatting so copy-pasting into /flowshift status
-  // doesn't pick up surrounding Slack markdown characters
-  return `${statusEmoji} *${route}* — ID: ${id.slice(0, 8)} — ${created}`;
+  return `${statusEmoji} *${route}* — ID: ${id} — ${created}`;
 }
