@@ -12,7 +12,7 @@ Submit a source workflow (file upload or plain-text description) and a source/de
 
 1. **A migration playbook** — step-by-step breakdown, node mapping, credential setup guide, gotchas, security considerations, error & failure handling audit, and improvement suggestions
 2. **An import file** — a functional, ready-to-import JSON (n8n workflow, Make blueprint, etc.) with `{{PLACEHOLDER}}` tokens for API keys
-3. **A Google Drive folder** — both files uploaded automatically under a per-user, per-run subfolder, shared publicly via link
+3. **A Google Drive folder** — the playbook uploaded as a native Google Doc, a `.docx`, and a raw `.md`; plus the import file — all under a per-user, per-run subfolder shared publicly via link
 
 **Supported platforms:** n8n · Make · Zapier · Tray · Boomi · Workato · Celigo · Power Automate
 
@@ -212,6 +212,19 @@ GET /health   → { "status": "ok", "service": "flowshift-api", "timestamp": "..
 
 ---
 
+### Internal
+
+```
+POST /internal/model-check
+X-Internal-Secret: <MODEL_CHECK_SECRET>   ← only required if env var is set
+```
+
+Manually triggers the weekly model check immediately. The server queries the Anthropic Models API, upgrades to the latest `claude-opus-*` model if one is newer than the current active model, and DMs all linked Slack users on upgrade. The check also runs automatically 30 seconds after startup and every 7 days thereafter — this endpoint is for ad-hoc use only.
+
+Returns `{ ok: true, message: "Model check triggered" }`. The check itself runs asynchronously; watch server logs for results.
+
+---
+
 ## Slack bot
 
 The FlowShift Slack bot maps the full API surface to native Slack patterns.
@@ -228,13 +241,17 @@ The FlowShift Slack bot maps the full API surface to native Slack patterns.
 | `/flowshift list` | Shows your last 5 runs with status, full run ID, and a 📂 Drive link (ephemeral) |
 | `/flowshift status <run-id>` | Checks the status of a specific run (first 8 chars of ID work) |
 | `/flowshift unlink` | Removes the Slack ↔ FlowShift account link |
-| `/flowshift help` | Shows the command reference |
+| `/flowshift help` | Shows the command reference, including the currently active Claude model |
 
 ### Result delivery
 
 When a run completes, FlowShift DMs you with:
 - ✅ A rich message with a playbook preview and action buttons (*View Full Playbook*, *Open in Drive*)
 - 📎 The import file uploaded as a Slack file attachment (if the platform supports it)
+
+### Model upgrade notifications
+
+FlowShift checks the Anthropic Models API 30 seconds after startup and once per week. If a newer `claude-opus-*` model is available, it upgrades automatically (no redeploy required) and DMs all linked Slack users with the old and new model names.
 
 ### User linking
 
@@ -254,11 +271,15 @@ Three ways to get started in Slack:
 
 ```
 Parent folder (your GDrive, authorized via OAuth)
-└── you@example.com/          ← user folder, anyone-with-link can view
-    └── run_<uuid>/           ← per-run folder, anyone-with-link can view
-        ├── playbook.md
-        └── flowshift_<src>_to_<dst>.json
+└── you@example.com/                                        ← user folder, anyone-with-link can view
+    └── run_<uuid>/                                         ← per-run folder, anyone-with-link can view
+        ├── FlowShift - <Src> to <Dst> Migration Playbook   ← native Google Doc (markdown → HTML → GDoc)
+        ├── FlowShift - <Src> to <Dst> Migration Playbook.docx
+        ├── FlowShift - <Src> to <Dst> Migration Playbook.md
+        └── flowshift_<src>_to_<dst>.json                   ← ready-to-import workflow file
 ```
+
+Build Guide runs use `FlowShift - <Dst> Build Guide` as the base filename. The Google Doc and `.docx` are generated from the same markdown source; the raw `.md` is kept alongside for completeness.
 
 ---
 
@@ -340,6 +361,12 @@ cd frontend && npm run dev
 |---|---|
 | `SLACK_BOT_TOKEN` | Bot User OAuth Token (starts with `xoxb-`) |
 | `SLACK_SIGNING_SECRET` | Signing secret from Slack app Basic Information page |
+
+### Optional — Internal endpoints
+
+| Variable | Default | Description |
+|---|---|---|
+| `MODEL_CHECK_SECRET` | — | If set, `POST /internal/model-check` requires an `X-Internal-Secret: <value>` header. Leave unset to allow unauthenticated local triggers. |
 
 ### Infrastructure
 

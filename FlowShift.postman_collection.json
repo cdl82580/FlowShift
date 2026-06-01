@@ -32,9 +32,15 @@
     },
     {
       "key": "claude_model",
-      "value": "claude-opus-4-7",
+      "value": "claude-opus-4-8",
       "type": "string",
-      "description": "Claude model used for generation. Corresponds to the CLAUDE_MODEL env var."
+      "description": "Claude model used for generation. Corresponds to the CLAUDE_MODEL env var default. The active model may differ if the weekly auto-check has upgraded it via the settings table."
+    },
+    {
+      "key": "model_check_secret",
+      "value": "",
+      "type": "string",
+      "description": "Optional. If MODEL_CHECK_SECRET is set on the server, supply that value here to authenticate POST /internal/model-check requests."
     },
     {
       "key": "max_tokens",
@@ -76,6 +82,54 @@
               "status": "OK",
               "code": 200,
               "body": "{\n  \"status\": \"ok\",\n  \"service\": \"flowshift-api\",\n  \"timestamp\": \"2026-05-28T19:00:00.000Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Internal",
+      "description": "Internal maintenance endpoints. These are not part of the public API and do not require an X-API-Key. If MODEL_CHECK_SECRET is set as an environment variable, the X-Internal-Secret header is required.",
+      "item": [
+        {
+          "name": "Trigger Model Check",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Internal-Secret",
+                "value": "{{model_check_secret}}",
+                "description": "Required only if MODEL_CHECK_SECRET env var is set on the server.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/internal/model-check",
+              "host": ["{{base_url}}"],
+              "path": ["internal", "model-check"]
+            },
+            "description": "Manually triggers the weekly Claude model check immediately. The server queries the Anthropic Models API for the latest `claude-opus-*` model. If a newer version is found, the active model is updated in the database (no redeploy required) and all linked Slack users receive a DM notification.\n\nThis check also runs automatically 30 seconds after server startup and every 7 days thereafter — this endpoint is for ad-hoc use only.\n\n**Authentication:** If `MODEL_CHECK_SECRET` is set, include `X-Internal-Secret: <value>` header. Otherwise no auth required.\n\n**Response:** `{ ok: true, message: \"Model check triggered\" }` — returned immediately. The check itself runs asynchronously; watch server logs for results (`[modelCheck]` prefix).\n\n**Example log output (upgrade):**\n```\n[modelCheck] Model upgraded: claude-opus-4-8 → claude-opus-4-9\n```\n**Example log output (no change):**\n```\n[modelCheck] Model is current: claude-opus-4-8\n```"
+          },
+          "response": [
+            {
+              "name": "200 OK — check triggered",
+              "originalRequest": {
+                "method": "POST",
+                "url": { "raw": "{{base_url}}/internal/model-check" }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"ok\": true,\n  \"message\": \"Model check triggered\"\n}"
+            },
+            {
+              "name": "401 Unauthorized — secret required",
+              "originalRequest": {
+                "method": "POST",
+                "url": { "raw": "{{base_url}}/internal/model-check" }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"error\": \"Unauthorized\"\n}"
             }
           ]
         }
@@ -612,7 +666,7 @@
     },
     {
       "name": "Runs",
-      "description": "Migration run creation and result retrieval.\n\nA run represents a single iPaaS migration or build job.\n\n**Source platform is optional.** Omitting `source` switches Claude to *Build Guide* mode \u2014 a step-by-step guide for building the workflow in the destination platform from scratch rather than a migration. The flow is:\n1. `POST /api/runs` \u2014 create a run (returns `202` immediately, processing is async)\n2. `GET /api/runs/:id` \u2014 poll every 3\u20135 seconds until `status` is `completed` or `failed`\n\n**Supported platforms:** `n8n`, `Make`, `Zapier`, `Tray`, `Boomi`, `Workato`, `Celigo`, `Power Automate`\n\nWhen a run completes, two files are available in the response and in Google Drive:\n- **`playbook.md`** \u2014 step-by-step migration guide in markdown, plus security considerations, error & failure handling audit, and improvement suggestions\n- **`flowshift_<src>_to_<dst>.json`** \u2014 ready-to-import workflow file for the destination platform (where supported)\n### Import file compatibility\n\n| Platform | Import file | Notes |\n|---|---|---|\n| n8n | \u2705 Reliable | Open, well-documented JSON format |\n| Make | \u2705 Reliable | Blueprint JSON \u2014 connection re-linking is expected on any Make import |\n| Zapier | \u274c Not available | Zapier doesn't support workflow import; `import_file_content` is always null |\n| Tray | \u26a0\ufe0f Best-effort | Proprietary format \u2014 connector configs need manual adjustment |\n| Boomi | \u26a0\ufe0f Best-effort | Complex enterprise schema tied to Atoms/connectors |\n| Workato | \u26a0\ufe0f Best-effort | Proprietary recipe format \u2014 trigger/action configs may need adjustment |\n| Celigo | \u26a0\ufe0f Best-effort | Proprietary flows with account-specific mappings and scripts |\n| Power Automate | \u26a0\ufe0f Best-effort | Proprietary Microsoft schema \u2014 connections/credentials need manual config |\n\nAn amber caveat banner appears in the UI for all \u26a0\ufe0f platforms when a run completes.",
+      "description": "Migration run creation and result retrieval.\n\nA run represents a single iPaaS migration or build job.\n\n**Source platform is optional.** Omitting `source` switches Claude to *Build Guide* mode \u2014 a step-by-step guide for building the workflow in the destination platform from scratch rather than a migration. The flow is:\n1. `POST /api/runs` \u2014 create a run (returns `202` immediately, processing is async)\n2. `GET /api/runs/:id` \u2014 poll every 3\u20135 seconds until `status` is `completed` or `failed`\n\n**Supported platforms:** `n8n`, `Make`, `Zapier`, `Tray`, `Boomi`, `Workato`, `Celigo`, `Power Automate`\n\nWhen a run completes, four files are written to the Google Drive run folder and the playbook text is available in the response:\n- **`FlowShift - <Src> to <Dst> Migration Playbook`** \u2014 native Google Doc (markdown converted via HTML)\n- **`FlowShift - <Src> to <Dst> Migration Playbook.docx`** \u2014 Word document exported from the Google Doc\n- **`FlowShift - <Src> to <Dst> Migration Playbook.md`** \u2014 raw markdown including security considerations, error & failure handling audit, and improvement suggestions\n- **`flowshift_<src>_to_<dst>.json`** \u2014 ready-to-import workflow file for the destination platform (where supported)\n### Import file compatibility\n\n| Platform | Import file | Notes |\n|---|---|---|\n| n8n | \u2705 Reliable | Open, well-documented JSON format |\n| Make | \u2705 Reliable | Blueprint JSON \u2014 connection re-linking is expected on any Make import |\n| Zapier | \u274c Not available | Zapier doesn't support workflow import; `import_file_content` is always null |\n| Tray | \u26a0\ufe0f Best-effort | Proprietary format \u2014 connector configs need manual adjustment |\n| Boomi | \u26a0\ufe0f Best-effort | Complex enterprise schema tied to Atoms/connectors |\n| Workato | \u26a0\ufe0f Best-effort | Proprietary recipe format \u2014 trigger/action configs may need adjustment |\n| Celigo | \u26a0\ufe0f Best-effort | Proprietary flows with account-specific mappings and scripts |\n| Power Automate | \u26a0\ufe0f Best-effort | Proprietary Microsoft schema \u2014 connections/credentials need manual config |\n\nAn amber caveat banner appears in the UI for all \u26a0\ufe0f platforms when a run completes.",
       "item": [
         {
           "name": "Create Run (description only)",
@@ -901,7 +955,7 @@
                 "{{run_id}}"
               ]
             },
-            "description": "Fetch the full details and results of a specific run. Poll this endpoint every 3\u20135 seconds after creating a run until `status` reaches `completed` or `failed`.\n\n**Authentication:** `X-API-Key` header required. Users can only fetch their own runs.\n\n**Path parameters:**\n\n| Parameter | Description |\n|---|---|\n| `:id` | Run UUID (stored in `{{run_id}}` after Create Run) |\n\n**Status lifecycle:**\n```\npending \u2192 processing \u2192 completed\n                    \u2198 failed\n```\n\n**Response fields:**\n\n| Field | Type | Description |\n|---|---|---|\n| `id` | string | Run UUID |\n| `user_id` | string | Owning user UUID |\n| `source` | string | Source platform |\n| `destination` | string | Destination platform |\n| `description` | string \\| null | Plain-text description, if provided |\n| `original_filename` | string \\| null | Uploaded filename, if provided |\n| `status` | string | `pending` \\| `processing` \\| `completed` \\| `failed` |\n| `playbook_text` | string \\| null | Full migration playbook in markdown. Populated when `completed`. Includes security considerations, error & failure handling audit, and improvement suggestions appended as sections. |\n| `import_file_content` | string \\| null | Ready-to-import workflow file text. Null if destination doesn't support import (e.g. Zapier). |\n| `import_file_name` | string \\| null | Suggested filename for the import file (e.g. `flowshift_zapier_to_n8n.json`) |\n| `import_file_extension` | string \\| null | File extension without dot (e.g. `json`) |\n| `has_import_file` | boolean | Convenience flag \u2014 true when `import_file_content` is non-null |\n| `gdrive_run_folder_url` | string \\| null | Google Drive folder URL containing `playbook.md` and the import file. Null if Drive is not authorized. |\n| `error_message` | string \\| null | Error details when `status` is `failed` |\n| `created_at` | string | ISO 8601 UTC timestamp |\n| `completed_at` | string \\| null | ISO 8601 UTC timestamp. Null while pending or processing. |\n\n**Import file caveats:** n8n and Make produce reliable import files. Tray, Boomi, Workato, Celigo, and Power Automate use proprietary formats \u2014 generated files are best-effort approximations that may need manual configuration. Zapier never generates a file (`has_import_file` is always false)."
+            "description": "Fetch the full details and results of a specific run. Poll this endpoint every 3\u20135 seconds after creating a run until `status` reaches `completed` or `failed`.\n\n**Authentication:** `X-API-Key` header required. Users can only fetch their own runs.\n\n**Path parameters:**\n\n| Parameter | Description |\n|---|---|\n| `:id` | Run UUID (stored in `{{run_id}}` after Create Run) |\n\n**Status lifecycle:**\n```\npending \u2192 processing \u2192 completed\n                    \u2198 failed\n```\n\n**Response fields:**\n\n| Field | Type | Description |\n|---|---|---|\n| `id` | string | Run UUID |\n| `user_id` | string | Owning user UUID |\n| `source` | string | Source platform |\n| `destination` | string | Destination platform |\n| `description` | string \\| null | Plain-text description, if provided |\n| `original_filename` | string \\| null | Uploaded filename, if provided |\n| `status` | string | `pending` \\| `processing` \\| `completed` \\| `failed` |\n| `playbook_text` | string \\| null | Full migration playbook in markdown. Populated when `completed`. Includes security considerations, error & failure handling audit, and improvement suggestions appended as sections. |\n| `import_file_content` | string \\| null | Ready-to-import workflow file text. Null if destination doesn't support import (e.g. Zapier). |\n| `import_file_name` | string \\| null | Suggested filename for the import file (e.g. `flowshift_zapier_to_n8n.json`) |\n| `import_file_extension` | string \\| null | File extension without dot (e.g. `json`) |\n| `has_import_file` | boolean | Convenience flag \u2014 true when `import_file_content` is non-null |\n| `gdrive_run_folder_url` | string \\| null | Google Drive folder URL containing the Google Doc, `.docx`, `.md`, and import file. Null if Drive is not authorized. |\n| `error_message` | string \\| null | Error details when `status` is `failed` |\n| `created_at` | string | ISO 8601 UTC timestamp |\n| `completed_at` | string \\| null | ISO 8601 UTC timestamp. Null while pending or processing. |\n\n**Import file caveats:** n8n and Make produce reliable import files. Tray, Boomi, Workato, Celigo, and Power Automate use proprietary formats \u2014 generated files are best-effort approximations that may need manual configuration. Zapier never generates a file (`has_import_file` is always false)."
           },
           "response": [
             {
