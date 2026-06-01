@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { config } from './config';
 import { initDb } from './db';
+import { checkAndUpdateModel } from './services/modelCheck';
 import usersRouter from './routes/users';
 import runsRouter  from './routes/runs';
 import authRouter  from './routes/auth';
@@ -93,6 +94,18 @@ app.use('/auth',      authRouter);
 app.use('/api/users', registerLimiter, usersRouter);
 app.use('/api/runs',  runsLimiter,     runsRouter);
 
+// ── Internal model-check endpoint (manual trigger) ───────────────────────────
+app.post('/internal/model-check', express.json(), (req: express.Request, res: express.Response): void => {
+  const secret = config.modelCheckSecret;
+  if (secret && req.headers['x-internal-secret'] !== secret) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  // Fire-and-forget — respond immediately
+  void checkAndUpdateModel();
+  res.json({ ok: true, message: 'Model check triggered' });
+});
+
 // ── SPA fallback ──────────────────────────────────────────────────────────────
 app.get('*', (_req, res) => {
   const index = path.join(PUBLIC_DIR, 'index.html');
@@ -104,6 +117,8 @@ app.get('*', (_req, res) => {
   }
 });
 
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
 initDb()
   .then(() => {
     app.listen(config.port, () => {
@@ -113,6 +128,12 @@ initDb()
       console.log(`Frontend: ${fs.existsSync(PUBLIC_DIR) ? 'serving from ' + PUBLIC_DIR : 'not built'}`);
       console.log(`Environment: ${isProd ? 'production' : 'development'}`);
     });
+
+    // Run an immediate model check 30s after startup, then weekly thereafter
+    setTimeout(() => {
+      void checkAndUpdateModel();
+      setInterval(() => void checkAndUpdateModel(), WEEK_MS);
+    }, 30_000);
   })
   .catch((err) => {
     console.error('Failed to initialize:', err);

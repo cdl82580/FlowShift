@@ -16,6 +16,7 @@ import express from 'express';
 import { getDb } from '../db';
 import { config } from '../config';
 import { VALID_PLATFORMS } from '../services/claude';
+import { getActiveModel } from '../services/modelCheck';
 import {
   verifySlackSignature,
   getSlackClient,
@@ -103,6 +104,7 @@ router.post('/commands', requireSlackSignature, async (req: Request, res: Respon
   try {
     // ── /flowshift help ──────────────────────────────────────────────────────
     if (text === 'help') {
+      const activeModel = await getActiveModel();
       await reply(responseUrl, {
         text: 'FlowShift help',
         blocks: [{
@@ -121,7 +123,8 @@ router.post('/commands', requireSlackSignature, async (req: Request, res: Respon
               '*Account:*\n' +
               '• `/flowshift unlink` — unlink your account from Slack\n' +
               '• `/flowshift help` — show this message\n\n' +
-              `*Web app:* <${config.appUrl}|${config.appUrl}>`,
+              `*Web app:* <${config.appUrl}|${config.appUrl}>\n` +
+              `*Model:* \`${activeModel}\``,
           },
         }],
       });

@@ -33,4 +33,8 @@ export const config = {
   appUrl: process.env.APP_URL || 'https://flowshift-cdl.fly.dev',
 
   driveEnabled: !!(process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET),
+
+  // ── Optional — internal model-check endpoint secret ───────────────────────
+  // If set, POST /internal/model-check requires X-Internal-Secret: <value>
+  modelCheckSecret: process.env.MODEL_CHECK_SECRET || '',
 };

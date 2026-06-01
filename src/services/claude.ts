@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { config } from '../config';
+import { getActiveModel } from './modelCheck';
 
 export const VALID_PLATFORMS = ['n8n', 'Make', 'Zapier', 'Tray', 'Boomi', 'Workato', 'Celigo', 'Power Automate'] as const;
 export type Platform = typeof VALID_PLATFORMS[number];
@@ -34,8 +35,9 @@ export async function generateMigrationPlaybook(submission: Submission): Promise
     ? `You are Flowshift, an expert iPaaS migration consultant. You specialize in translating workflow logic between platforms. Your primary goal is to provide functional, valid import files (JSON) for the destination platform whenever technically possible.`
     : `You are Flowshift, an expert iPaaS workflow consultant. You specialize in building workflows from scratch on any iPaaS platform. Your primary goal is to provide functional, valid import files (JSON) for the target platform whenever technically possible.`;
 
+  const activeModel = await getActiveModel();
   const response = await getClient().messages.create({
-    model: config.claudeModel,
+    model: activeModel,
     max_tokens: config.maxTokens,
     system: systemPrompt,
     messages: [{ role: 'user', content: buildPrompt(submission) }],
