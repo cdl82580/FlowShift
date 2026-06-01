@@ -10,7 +10,7 @@ AI-powered iPaaS migration playbook generator. Describe a workflow in one platfo
 
 Submit a source workflow (file upload or plain-text description) and a source/destination platform pair. FlowShift calls Claude to produce:
 
-1. **A migration playbook** — step-by-step breakdown, node mapping, credential setup guide, and gotchas
+1. **A migration playbook** — step-by-step breakdown, node mapping, credential setup guide, gotchas, security considerations, error & failure handling audit, and improvement suggestions
 2. **An import file** — a functional, ready-to-import JSON (n8n workflow, Make blueprint, etc.) with `{{PLACEHOLDER}}` tokens for API keys
 3. **A Google Drive folder** — both files uploaded automatically under a per-user, per-run subfolder, shared publicly via link
 
@@ -168,7 +168,7 @@ X-API-Key: <key>
 | `description` | string \| null | Description submitted with the run |
 | `original_filename` | string \| null | Uploaded filename, if any |
 | `status` | string | `pending` → `processing` → `completed` \| `failed` |
-| `playbook_text` | string \| null | Full migration guide in markdown. Populated when `completed`. |
+| `playbook_text` | string \| null | Full migration guide in markdown. Populated when `completed`. Includes security considerations, error & failure handling audit, and improvement suggestions appended as sections. |
 | `import_file_content` | string \| null | Ready-to-import workflow file text. Null if platform doesn't support import (e.g. Zapier). |
 | `import_file_name` | string \| null | Suggested filename (e.g. `flowshift_zapier_to_n8n.json`) |
 | `import_file_extension` | string \| null | Extension without dot (e.g. `json`) |

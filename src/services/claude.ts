@@ -17,6 +17,9 @@ export interface PlaybookResult {
   importFileContent: string | null;
   importFileName: string | null;
   importFileExtension: string | null;
+  securityReview: string | null;
+  errorHandlingReview: string | null;
+  suggestions: string | null;
 }
 
 let _client: Anthropic | null = null;
@@ -97,7 +100,19 @@ Provide actual functional logic, not a blank template. Use {{PLACEHOLDER}} for A
 
 ---BEGIN IMPORT FILE FORMAT---
 [e.g. "json"]
----END IMPORT FILE FORMAT---`;
+---END IMPORT FILE FORMAT---
+
+---BEGIN SECURITY REVIEW---
+[Audit the workflow for security risks: credential and secret handling, auth patterns, data exposure (PII/sensitive fields in logs or payloads), hardcoded values that should be env vars, platform-specific risks (e.g. tokens stored in plain JSON), and any permissions that are broader than necessary. Be specific and actionable.]
+---END SECURITY REVIEW---
+
+---BEGIN ERROR HANDLING REVIEW---
+[Audit the workflow's error and failure handling: missing retry logic, unhandled error branches, silent failures, lack of alerting or notifications on failure, non-idempotent steps that could cause duplicates on retry, missing timeouts, and any steps where a failure would leave data in a bad state. Be specific about which steps are affected and what should be added.]
+---END ERROR HANDLING REVIEW---
+
+---BEGIN SUGGESTIONS---
+[Improvements beyond security and error handling: rate limiting considerations, idempotency gaps, performance or cost optimizations, platform-specific features that could simplify the workflow, missing logging or observability, and anything else worth noting that isn't covered by the source workflow or description. Be specific and actionable.]
+---END SUGGESTIONS---`;
 }
 
 function parseOutput(rawOutput: string, submission: Submission): PlaybookResult {
@@ -129,5 +144,22 @@ function parseOutput(rawOutput: string, submission: Submission): PlaybookResult 
       : `flowshift_${safe(submission.destination)}_build.${importFileExtension}`;
   }
 
-  return { playbookText, importFileContent, importFileName, importFileExtension };
+  const securityMatch = rawOutput.match(/---BEGIN SECURITY REVIEW---([\s\S]*?)---END SECURITY REVIEW---/);
+  const securityReview = securityMatch ? securityMatch[1].trim() : null;
+
+  const errorMatch = rawOutput.match(/---BEGIN ERROR HANDLING REVIEW---([\s\S]*?)---END ERROR HANDLING REVIEW---/);
+  const errorHandlingReview = errorMatch ? errorMatch[1].trim() : null;
+
+  const suggestionsMatch = rawOutput.match(/---BEGIN SUGGESTIONS---([\s\S]*?)---END SUGGESTIONS---/);
+  const suggestions = suggestionsMatch ? suggestionsMatch[1].trim() : null;
+
+  const appendix = [
+    securityReview      ? `## Security Considerations\n\n${securityReview}`       : null,
+    errorHandlingReview ? `## Error & Failure Handling\n\n${errorHandlingReview}` : null,
+    suggestions         ? `## Suggestions & Improvements\n\n${suggestions}`       : null,
+  ].filter(Boolean).join('\n\n---\n\n');
+
+  const fullPlaybookText = appendix ? `${playbookText}\n\n---\n\n${appendix}` : playbookText;
+
+  return { playbookText: fullPlaybookText, importFileContent, importFileName, importFileExtension, securityReview, errorHandlingReview, suggestions };
 }
