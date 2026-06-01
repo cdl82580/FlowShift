@@ -3,8 +3,10 @@ import { config } from '../config';
 import { getDb } from '../db';
 import { getSlackClient } from './slack';
 
-// Matches claude-opus-<major>-<minor>[...] — ignores dated snapshots with extra suffixes
-const OPUS_PATTERN = /^claude-opus-(\d+)-(\d+)$/;
+// Matches claude-opus-<major>-<minor> with minor capped at 2 digits.
+// This intentionally excludes dated snapshot IDs like claude-opus-4-20250514
+// where the "minor" portion is an 8-digit date, not a version number.
+const OPUS_PATTERN = /^claude-opus-(\d+)-(\d{1,2})$/;
 
 // ── Active model resolution ───────────────────────────────────────────────────
 

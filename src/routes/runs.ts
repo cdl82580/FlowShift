@@ -134,22 +134,30 @@ async function processRun({ runId, user, db, submission }: ProcessRunArgs): Prom
           : `FlowShift - ${safe(submission.destination)} Build Guide`;
 
         // Upload raw markdown
+        console.log(`Run ${runId}: uploading .md…`);
         await uploadFile(drive, runFolderId, `${docBaseName}.md`, result.playbookText, 'text/markdown');
+        console.log(`Run ${runId}: .md uploaded`);
 
         // Upload as native Google Doc (markdown → HTML → GDoc conversion)
         let googleDocId: string | null = null;
         try {
+          console.log(`Run ${runId}: uploading Google Doc…`);
           googleDocId = await uploadAsGoogleDoc(drive, runFolderId, docBaseName, result.playbookText);
-        } catch (gdocErr) {
-          console.error(`Run ${runId}: Google Doc upload failed:`, gdocErr);
+          console.log(`Run ${runId}: Google Doc uploaded (id=${googleDocId})`);
+        } catch (gdocErr: unknown) {
+          const msg = gdocErr instanceof Error ? gdocErr.message : String(gdocErr);
+          console.error(`Run ${runId}: Google Doc upload failed: ${msg}`, gdocErr);
         }
 
         // Export the Google Doc as .docx and upload alongside
         if (googleDocId) {
           try {
+            console.log(`Run ${runId}: exporting .docx…`);
             await exportGoogleDocAsDocx(drive, runFolderId, `${docBaseName}.docx`, googleDocId);
-          } catch (docxErr) {
-            console.error(`Run ${runId}: DOCX export failed:`, docxErr);
+            console.log(`Run ${runId}: .docx uploaded`);
+          } catch (docxErr: unknown) {
+            const msg = docxErr instanceof Error ? docxErr.message : String(docxErr);
+            console.error(`Run ${runId}: DOCX export failed: ${msg}`, docxErr);
           }
         }
 
