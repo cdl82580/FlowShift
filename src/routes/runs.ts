@@ -4,7 +4,7 @@ import { Client } from '@libsql/client';
 import { getDb } from '../db';
 import { requireApiKey, AuthedRequest, UserRow } from '../auth';
 import { generateMigrationPlaybook, VALID_PLATFORMS } from '../services/claude';
-import { getDriveClient, getOrCreateUserFolder, createRunFolder, uploadFile } from '../services/drive';
+import { getDriveClient, getOrCreateUserFolder, createRunFolder, uploadFile, uploadAsGoogleDoc, exportGoogleDocAsDocx } from '../services/drive';
 import { config } from '../config';
 
 const router = Router();
@@ -127,7 +127,31 @@ async function processRun({ runId, user, db, submission }: ProcessRunArgs): Prom
         runFolderId = runFolder.folderId;
         runFolderUrl = runFolder.folderUrl;
 
-        await uploadFile(drive, runFolderId, 'playbook.md', result.playbookText, 'text/markdown');
+        // Build a human-readable document name for this run
+        const safe = (s: string) => s.replace(/[^a-zA-Z0-9 &]/g, '').trim();
+        const docBaseName = submission.source
+          ? `FlowShift - ${safe(submission.source)} to ${safe(submission.destination)} Migration Playbook`
+          : `FlowShift - ${safe(submission.destination)} Build Guide`;
+
+        // Upload raw markdown
+        await uploadFile(drive, runFolderId, `${docBaseName}.md`, result.playbookText, 'text/markdown');
+
+        // Upload as native Google Doc (markdown → HTML → GDoc conversion)
+        let googleDocId: string | null = null;
+        try {
+          googleDocId = await uploadAsGoogleDoc(drive, runFolderId, docBaseName, result.playbookText);
+        } catch (gdocErr) {
+          console.error(`Run ${runId}: Google Doc upload failed:`, gdocErr);
+        }
+
+        // Export the Google Doc as .docx and upload alongside
+        if (googleDocId) {
+          try {
+            await exportGoogleDocAsDocx(drive, runFolderId, `${docBaseName}.docx`, googleDocId);
+          } catch (docxErr) {
+            console.error(`Run ${runId}: DOCX export failed:`, docxErr);
+          }
+        }
 
         if (result.importFileContent && result.importFileName) {
           const mime = result.importFileExtension === 'json' ? 'application/json' : 'text/plain';

@@ -14,7 +14,7 @@ export const config = {
   anthropicApiKey: required('ANTHROPIC_API_KEY'),
 
   // ── Optional — Claude model tuning (sensible defaults) ────────────────────
-  claudeModel: process.env.CLAUDE_MODEL || 'claude-opus-4-7',
+  claudeModel: process.env.CLAUDE_MODEL || 'claude-opus-4-8',
   maxTokens: parseInt(process.env.MAX_TOKENS || '8192', 10),
 
   // ── Optional — Email recovery via Resend (recovery flow disabled if unset) ─

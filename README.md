@@ -41,7 +41,7 @@ The UI surfaces an inline caveat banner on the run detail page for all ⚠️ pl
 |---|---|
 | API | Node.js · TypeScript · Express |
 | Database | SQLite via `@libsql/client` (persisted on Fly.io volume) |
-| AI | Anthropic Claude (`claude-opus-4-7`) |
+| AI | Anthropic Claude (`claude-opus-4-8`) |
 | Storage | Google Drive API v3 (OAuth2) |
 | Frontend | React 18 · TypeScript · Vite · Tailwind CSS |
 | Slack | `@slack/web-api` · Block Kit modals · slash commands |
@@ -315,7 +315,7 @@ cd frontend && npm run dev
 
 | Variable | Default | Description |
 |---|---|---|
-| `CLAUDE_MODEL` | `claude-opus-4-7` | Claude model ID |
+| `CLAUDE_MODEL` | `claude-opus-4-8` | Claude model ID |
 | `MAX_TOKENS` | `8192` | Max tokens for Claude responses |
 
 ### Optional — Email recovery (disabled if unset)

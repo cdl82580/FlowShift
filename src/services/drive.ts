@@ -1,5 +1,6 @@
 import { google, drive_v3 } from 'googleapis';
 import { Readable } from 'stream';
+import { marked } from 'marked';
 import { config } from '../config';
 import { getDb } from '../db';
 
@@ -104,6 +105,65 @@ export async function uploadFile(
     media: {
       mimeType,
       body: Readable.from([content]),
+    },
+    fields: 'id',
+  });
+
+  return file.data.id!;
+}
+
+/**
+ * Convert markdown to HTML and upload as a native Google Doc.
+ * Returns the new Google Doc file ID.
+ */
+export async function uploadAsGoogleDoc(
+  drive: drive_v3.Drive,
+  folderId: string,
+  docName: string,
+  markdownContent: string
+): Promise<string> {
+  const html = await marked(markdownContent);
+  const file = await drive.files.create({
+    requestBody: {
+      name: docName,
+      mimeType: 'application/vnd.google-apps.document',
+      parents: [folderId],
+    },
+    media: {
+      mimeType: 'text/html',
+      body: Readable.from([html]),
+    },
+    fields: 'id',
+  });
+
+  return file.data.id!;
+}
+
+/**
+ * Export an existing Google Doc as a .docx file and upload it to the same folder.
+ * Returns the new .docx file ID.
+ */
+export async function exportGoogleDocAsDocx(
+  drive: drive_v3.Drive,
+  folderId: string,
+  docxName: string,
+  googleDocId: string
+): Promise<string> {
+  const exportRes = await drive.files.export(
+    { fileId: googleDocId, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
+    { responseType: 'arraybuffer' }
+  );
+
+  const buffer = Buffer.from(exportRes.data as ArrayBuffer);
+
+  const file = await drive.files.create({
+    requestBody: {
+      name: docxName,
+      parents: [folderId],
+    },
+    media: {
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      body: Readable.from(buffer),
     },
     fields: 'id',
   });
