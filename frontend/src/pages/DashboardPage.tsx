@@ -75,11 +75,20 @@ function DriveIcon() {
   );
 }
 
+/** Convert e.g. "claude-opus-4-8" → "Claude Opus 4.8" */
+function formatModelName(modelId: string): string {
+  const m = modelId.match(/^claude-(\w+)-(\d+)-(\d+)/i);
+  if (!m) return modelId;
+  const family = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
+  return `Claude ${family} ${m[2]}.${m[3]}`;
+}
+
 export function DashboardPage() {
   const navigate = useNavigate();
   const auth = getAuth();
   const [runs, setRuns] = useState<RunSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [model, setModel] = useState<string | null>(null);
 
   const fetchRuns = useCallback(async () => {
     if (!auth?.userId) return;
@@ -93,6 +102,13 @@ export function DashboardPage() {
   useEffect(() => {
     fetchRuns();
   }, [fetchRuns]);
+
+  useEffect(() => {
+    fetch('/health')
+      .then(r => r.json())
+      .then(d => { if (d.model) setModel(d.model); })
+      .catch(() => {});
+  }, []);
 
   // Poll while any run is in-flight
   useEffect(() => {
@@ -116,7 +132,14 @@ export function DashboardPage() {
       {/* Nav */}
       <header className="sticky top-0 z-20 border-b border-white/5 bg-slate-950/80 backdrop-blur-sm">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Logo size="sm" />
+          <div className="flex items-center gap-3">
+            <Logo size="sm" />
+            {model && (
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-medium tracking-wide">
+                ✦ {formatModelName(model)}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-slate-600 text-xs hidden sm:block truncate max-w-[180px]">{auth?.email}</span>
             <button onClick={signOut} className="text-slate-500 hover:text-slate-300 text-xs transition-colors">

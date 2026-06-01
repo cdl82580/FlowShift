@@ -85,8 +85,10 @@ const registerLimiter = rateLimit({
 // ── Static frontend ───────────────────────────────────────────────────────────
 app.use(express.static(PUBLIC_DIR));
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'flowshift-api', timestamp: new Date().toISOString() });
+app.get('/health', async (_req, res) => {
+  const { getActiveModel } = await import('./services/modelCheck');
+  const model = await getActiveModel().catch(() => config.claudeModel);
+  res.json({ status: 'ok', service: 'flowshift-api', timestamp: new Date().toISOString(), model });
 });
 
 // ── API routes ────────────────────────────────────────────────────────────────
