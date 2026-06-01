@@ -131,7 +131,7 @@ export function DashboardPage() {
     <div className="min-h-screen bg-slate-950">
       {/* Nav */}
       <header className="sticky top-0 z-20 border-b border-white/5 bg-slate-950/80 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Logo size="sm" />
             {model && (
@@ -149,9 +149,9 @@ export function DashboardPage() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-10">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         {/* Header row */}
-        <div className="flex items-start justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-white">
               {auth?.name ? `Hey, ${auth.name} 👋` : 'Your Migrations'}
@@ -162,7 +162,7 @@ export function DashboardPage() {
           </div>
           <button
             onClick={() => navigate('/runs/new')}
-            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-indigo-500/20 shrink-0"
+            className="flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-indigo-500/20 shrink-0 w-full sm:w-auto"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
@@ -182,8 +182,8 @@ export function DashboardPage() {
               { label: 'In Progress', value: inProgress, color: 'text-amber-400',   bg: 'bg-amber-400/5   border-amber-400/10'   },
               { label: 'Failed',      value: failed,     color: 'text-red-400',     bg: 'bg-red-400/5     border-red-400/10'     },
             ].map(({ label, value, color, bg }) => (
-              <div key={label} className={`border rounded-xl px-5 py-4 ${bg}`}>
-                <div className={`text-2xl font-bold ${color}`}>{value}</div>
+              <div key={label} className={`border rounded-xl px-3 py-3 sm:px-5 sm:py-4 ${bg}`}>
+                <div className={`text-xl sm:text-2xl font-bold ${color}`}>{value}</div>
                 <div className="text-slate-500 text-xs mt-0.5">{label}</div>
               </div>
             ))}
@@ -217,27 +217,34 @@ export function DashboardPage() {
               <Link
                 key={run.id}
                 to={`/runs/${run.id}`}
-                className="flex items-center justify-between bg-slate-900 border border-white/5 rounded-xl px-5 py-4 hover:border-indigo-500/25 hover:bg-slate-900/70 transition-all group"
+                className="flex items-center justify-between bg-slate-900 border border-white/5 rounded-xl px-4 sm:px-5 py-3.5 sm:py-4 hover:border-indigo-500/25 hover:bg-slate-900/70 transition-all group"
               >
                 {/* Left */}
-                <div className="flex items-center gap-3 min-w-0 flex-wrap">
-                  {run.source ? (
-                    <>
-                      <PlatformBadge name={run.source} />
-                      <svg className="w-3.5 h-3.5 text-slate-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                      </svg>
-                    </>
-                  ) : (
-                    <span className="text-xs text-slate-500 italic mr-1">Build Guide →</span>
-                  )}
-                  <PlatformBadge name={run.destination} />
-                  <StatusBadge status={run.status} />
-                  {run.original_filename && (
-                    <span className="text-slate-600 text-xs font-mono hidden sm:block truncate max-w-[140px]">
-                      📎 {run.original_filename}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {run.source ? (
+                      <>
+                        <PlatformBadge name={run.source} />
+                        <svg className="w-3.5 h-3.5 text-slate-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                      </>
+                    ) : (
+                      <span className="text-xs text-slate-500 italic">Build Guide →</span>
+                    )}
+                    <PlatformBadge name={run.destination} />
+                    <StatusBadge status={run.status} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {run.original_filename && (
+                      <span className="text-slate-600 text-xs font-mono truncate max-w-[160px]">
+                        📎 {run.original_filename}
+                      </span>
+                    )}
+                    <span className="text-slate-700 text-xs sm:hidden">
+                      {new Date(run.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     </span>
-                  )}
+                  </div>
                 </div>
                 {/* Right */}
                 <div className="flex items-center gap-3 shrink-0 ml-3">

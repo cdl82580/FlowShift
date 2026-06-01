@@ -139,7 +139,7 @@ export function RunDetailPage() {
     <div className="min-h-screen bg-slate-950">
       {/* Nav */}
       <header className="sticky top-0 z-20 border-b border-white/5 bg-slate-950/80 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center gap-3 text-sm">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3 text-sm">
           <Link to="/" className="text-slate-500 hover:text-slate-300 transition-colors">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -153,10 +153,10 @@ export function RunDetailPage() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Summary card */}
-        <div className="bg-slate-900 border border-white/5 rounded-2xl p-6 mb-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="bg-slate-900 border border-white/5 rounded-2xl p-4 sm:p-6 mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-3 flex-wrap">
               {run.source ? (
                 <>
@@ -171,13 +171,13 @@ export function RunDetailPage() {
               <PlatformChip name={run.destination} />
               <StatusBadge status={run.status} />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               {run.gdrive_run_folder_url && (
                 <a
                   href={run.gdrive_run_folder_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-white/5 text-slate-300 rounded-lg text-sm transition-all"
+                  className="flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 bg-slate-800 hover:bg-slate-700 border border-white/5 text-slate-300 rounded-lg text-sm transition-all flex-1 sm:flex-none"
                 >
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M6.28 3l5.72 9.9L6.28 21H1.8L7.52 12 1.8 3zM8.5 3h5l5.72 9-2.86 4.95L11.5 12 8.5 3zm8.7 0h5.02L17.5 12l-5.28 9H7.2l5.72-9.9z"/>
@@ -188,7 +188,7 @@ export function RunDetailPage() {
               {run.has_import_file && (
                 <button
                   onClick={downloadFile}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-lg text-sm font-medium transition-all"
+                  className="flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-lg text-sm font-medium transition-all flex-1 sm:flex-none"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -262,17 +262,17 @@ export function RunDetailPage() {
         {/* Completed — tabs */}
         {run.status === 'completed' && (
           <>
-            <div className="flex gap-1 bg-slate-900 border border-white/5 rounded-xl p-1 mb-5 w-fit">
+            <div className="flex gap-1 bg-slate-900 border border-white/5 rounded-xl p-1 mb-5 w-full sm:w-fit">
               <button
                 onClick={() => setTab('playbook')}
-                className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${tab === 'playbook' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-medium transition-all ${tab === 'playbook' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}
               >
                 Playbook
               </button>
               {run.has_import_file && (
                 <button
                   onClick={() => setTab('import')}
-                  className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${tab === 'import' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                  className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-medium transition-all ${tab === 'import' ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}
                 >
                   Import File
                   <span className="ml-1.5 text-xs opacity-50">.{run.import_file_extension}</span>
@@ -281,7 +281,7 @@ export function RunDetailPage() {
             </div>
 
             {tab === 'playbook' && run.playbook_text && (
-              <div className="bg-slate-900 border border-white/5 rounded-2xl px-8 py-8">
+              <div className="bg-slate-900 border border-white/5 rounded-2xl px-4 py-6 sm:px-8 sm:py-8">
                 <div
                   className="prose prose-invert prose-sm max-w-none
                     prose-headings:font-bold prose-headings:text-white prose-headings:tracking-tight
@@ -303,7 +303,7 @@ export function RunDetailPage() {
 
             {tab === 'import' && run.import_file_content && (
               <div className="bg-slate-900 border border-white/5 rounded-2xl overflow-hidden">
-                <div className="flex items-center justify-between px-6 py-3.5 border-b border-white/5 bg-white/2">
+                <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-white/5 bg-white/2">
                   <span className="text-slate-400 text-xs font-mono">{run.import_file_name}</span>
                   <button
                     onClick={copyFile}
@@ -315,7 +315,7 @@ export function RunDetailPage() {
                     }
                   </button>
                 </div>
-                <pre className="overflow-auto max-h-[70vh] p-6 text-xs font-mono text-slate-300 leading-relaxed">
+                <pre className="overflow-auto max-h-[70vh] p-4 sm:p-6 text-xs font-mono text-slate-300 leading-relaxed">
                   <code>{run.import_file_content}</code>
                 </pre>
               </div>
