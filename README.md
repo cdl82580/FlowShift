@@ -2,7 +2,7 @@
 
 AI-powered iPaaS migration playbook generator. Describe a workflow in one platform, get a full migration playbook and a ready-to-import workflow file for another — powered by Claude.
 
-**Live:** https://flowshift-cdl.fly.dev
+**Live:** https://flowshift.cdlav.us
 
 ---
 
@@ -353,7 +353,7 @@ cd frontend && npm run dev
 | `GOOGLE_OAUTH_CLIENT_ID` | — | GCP OAuth 2.0 client ID (Web application type) |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | — | GCP OAuth 2.0 client secret |
 | `GDRIVE_PARENT_FOLDER_ID` | `11BCUCoM3a0di8tYiz-r9EOuQ7AZlt7FU` | Parent folder — user subfolders created here |
-| `APP_URL` | `https://flowshift-cdl.fly.dev` | Public base URL — used to build OAuth callback URIs |
+| `APP_URL` | `https://flowshift.cdlav.us` | Public base URL — used to build OAuth callback URIs |
 
 ### Optional — Slack bot (disabled if unset)
 
@@ -424,7 +424,7 @@ fly secrets set \
 fly deploy --app flowshift-cdl
 
 # One-time post-deploy steps
-# Drive:  open https://flowshift-cdl.fly.dev/auth/google in a browser
+# Drive:  open https://flowshift.cdlav.us/auth/google in a browser
 # Slack:  /flowshift register  (new user)
 #         /flowshift link <api-key>  (existing user)
 ```

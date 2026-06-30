@@ -44,7 +44,7 @@ Go to **Slash Commands** → **Create New Command** and fill in:
 | Field | Value |
 |---|---|
 | **Command** | `/flowshift` |
-| **Request URL** | `https://flowshift-cdl.fly.dev/slack/commands` |
+| **Request URL** | `https://flowshift.cdlav.us/slack/commands` |
 | **Short Description** | `Generate iPaaS migration playbooks` |
 | **Usage Hint** | `[new \| list \| status <run-id> \| link <api-key> \| help]` |
 
@@ -58,7 +58,7 @@ Go to **Interactivity & Shortcuts** → toggle the feature **On** → set:
 
 | Field | Value |
 |---|---|
-| **Request URL** | `https://flowshift-cdl.fly.dev/slack/interactions` |
+| **Request URL** | `https://flowshift.cdlav.us/slack/interactions` |
 
 Click **Save Changes**.
 
@@ -118,7 +118,7 @@ A modal opens asking for your name (optional). Your Slack profile email is used 
 ```
 /flowshift link <your-api-key>
 ```
-Your API key is shown on the FlowShift dashboard at `https://flowshift-cdl.fly.dev`. Run this once to connect Slack.
+Your API key is shown on the FlowShift dashboard at `https://flowshift.cdlav.us`. Run this once to connect Slack.
 
 **Forgot your API key?**
 ```
@@ -188,7 +188,7 @@ FlowShift sends you a DM containing:
 → The `SLACK_BOT_TOKEN` or `SLACK_SIGNING_SECRET` secrets are not set. Re-run Step 7.
 
 **Modal submission does nothing / no DM received**
-→ Check that the Interactivity Request URL is set to `https://flowshift-cdl.fly.dev/slack/interactions` (Step 4).
+→ Check that the Interactivity Request URL is set to `https://flowshift.cdlav.us/slack/interactions` (Step 4).
 
 **"Invalid Slack signature" in server logs**
 → The `SLACK_SIGNING_SECRET` doesn't match the app. Go to **Basic Information → App Credentials** and re-copy it.
