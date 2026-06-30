@@ -1,0 +1,45 @@
+{
+    "display_information": {
+        "name": "FlowShift",
+        "description": "Generate iPaaS migration playbooks",
+        "background_color": "#6366f1"
+    },
+    "features": {
+        "bot_user": {
+            "display_name": "FlowShift",
+            "always_online": false
+        },
+        "slash_commands": [
+            {
+                "command": "/flowshift",
+                "url": "https://flowshift-cdl.fly.dev/slack/commands",
+                "description": "Generate iPaaS migration playbooks",
+                "should_escape": false
+            }
+        ]
+    },
+    "oauth_config": {
+        "scopes": {
+            "bot": [
+                "users:read.email",
+                "users:read",
+                "chat:write",
+                "commands",
+                "files:read",
+                "files:write",
+                "im:write"
+            ]
+        },
+        "pkce_enabled": false
+    },
+    "settings": {
+        "interactivity": {
+            "is_enabled": true,
+            "request_url": "https://flowshift-cdl.fly.dev/slack/interactions"
+        },
+        "org_deploy_enabled": false,
+        "socket_mode_enabled": false,
+        "token_rotation_enabled": false,
+        "is_mcp_enabled": false
+    }
+}
