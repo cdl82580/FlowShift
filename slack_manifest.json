@@ -12,7 +12,7 @@
         "slash_commands": [
             {
                 "command": "/flowshift",
-                "url": "https://flowshift-cdl.fly.dev/slack/commands",
+                "url": "https://flowshift.cdlav.us/slack/commands",
                 "description": "Generate iPaaS migration playbooks",
                 "should_escape": false
             }
@@ -35,7 +35,7 @@
     "settings": {
         "interactivity": {
             "is_enabled": true,
-            "request_url": "https://flowshift-cdl.fly.dev/slack/interactions"
+            "request_url": "https://flowshift.cdlav.us/slack/interactions"
         },
         "org_deploy_enabled": false,
         "socket_mode_enabled": false,

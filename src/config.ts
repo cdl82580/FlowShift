@@ -30,7 +30,7 @@ export const config = {
   googleOauthClientId:     process.env.GOOGLE_OAUTH_CLIENT_ID     || '',
   googleOauthClientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET || '',
   gdriveParentFolderId:    process.env.GDRIVE_PARENT_FOLDER_ID    || '11BCUCoM3a0di8tYiz-r9EOuQ7AZlt7FU',
-  appUrl: process.env.APP_URL || 'https://flowshift-cdl.fly.dev',
+  appUrl: process.env.APP_URL || 'https://flowshift.cdlav.us',
 
   driveEnabled: !!(process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET),
 
