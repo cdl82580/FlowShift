@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { api } from '../api';
@@ -68,10 +68,12 @@ function renderMarkdown(src: string): string {
 
 export function RunDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const [run, setRun]           = useState<Run | null>(null);
   const [loading, setLoading]   = useState(true);
   const [tab, setTab]           = useState<'playbook' | 'import'>('playbook');
   const [copied, setCopied]     = useState(false);
+  const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [pollTimedOut, setPollTimedOut] = useState(false);
   const pollCount = useRef(0);
 
@@ -80,7 +82,11 @@ export function RunDetailPage() {
     if (!id) return;
     const controller = new AbortController();
     api.getRun(id)
-      .then(r => { if (!controller.signal.aborted) setRun(r); })
+      .then(r => {
+        if (controller.signal.aborted) return;
+        setRun(r);
+        if (searchParams.get('tab') === 'import' && r.has_import_file) setTab('import');
+      })
       .catch(e => { if (!controller.signal.aborted) console.error(e); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
@@ -118,6 +124,20 @@ export function RunDetailPage() {
     await navigator.clipboard.writeText(run.import_file_content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function emailPlaybook() {
+    if (!id || emailState === 'sending') return;
+    setEmailState('sending');
+    try {
+      await api.emailRun(id);
+      setEmailState('sent');
+    } catch (e) {
+      console.error(e);
+      setEmailState('error');
+    } finally {
+      setTimeout(() => setEmailState('idle'), 3000);
+    }
   }
 
   if (loading) return (
@@ -172,6 +192,26 @@ export function RunDetailPage() {
               <StatusBadge status={run.status} />
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
+              {run.status === 'completed' && (
+                <button
+                  onClick={emailPlaybook}
+                  disabled={emailState === 'sending'}
+                  className="flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-60 border border-white/5 text-slate-300 rounded-lg text-sm transition-all flex-1 sm:flex-none"
+                >
+                  {emailState === 'sent' ? (
+                    <><svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg><span className="text-emerald-400">Sent!</span></>
+                  ) : emailState === 'error' ? (
+                    <span className="text-red-400">Failed — retry</span>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      {emailState === 'sending' ? 'Sending…' : 'Email me'}
+                    </>
+                  )}
+                </button>
+              )}
               {run.gdrive_run_folder_url && (
                 <a
                   href={run.gdrive_run_folder_url}

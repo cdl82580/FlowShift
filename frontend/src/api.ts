@@ -49,6 +49,8 @@ export const api = {
 
   getRun: (id: string) => request<Run>(`/runs/${id}`),
 
+  emailRun: (id: string) => request<{ message: string }>(`/runs/${id}/email`, { method: 'POST' }),
+
   requestRecovery: (email: string) =>
     request<{ message: string }>('/users/recover', {
       method: 'POST',

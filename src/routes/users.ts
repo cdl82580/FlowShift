@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { getDb } from '../db';
 import { requireApiKey, AuthedRequest } from '../auth';
 import { config } from '../config';
+import { sendEmail } from '../services/email';
 
 // Stricter limit for the recovery endpoint specifically — prevents email flooding
 const recoverLimiter = rateLimit({
@@ -19,47 +20,29 @@ const router = Router();
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 async function sendRecoveryEmail(toEmail: string, recoveryUrl: string): Promise<void> {
-  if (!config.resendApiKey) {
-    console.log(`[RECOVERY] No RESEND_API_KEY — recovery URL: ${recoveryUrl}`);
-    return;
-  }
-
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${config.resendApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: `FlowShift <${config.fromEmail}>`,
-      to: [toEmail],
-      subject: 'Your FlowShift API key recovery link',
-      html: `
-        <div style="font-family:sans-serif;max-width:520px;margin:40px auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px">
-          <h2 style="color:#4f46e5;margin:0 0 16px">FlowShift — API Key Recovery</h2>
-          <p style="color:#374151;line-height:1.6">
-            Click the button below to generate a new API key.
-            This link is valid for <strong>15 minutes</strong> and works only once.
-          </p>
-          <p style="margin:28px 0;text-align:center">
-            <a href="${recoveryUrl}"
-               style="background:#4f46e5;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block">
-              Reset my API key
-            </a>
-          </p>
-          <p style="color:#6b7280;font-size:13px">
-            If you didn't request this, ignore this email — your current key remains unchanged.
-          </p>
-          <hr style="border:none;border-top:1px solid #f3f4f6;margin:24px 0">
-          <p style="color:#9ca3af;font-size:12px;margin:0">FlowShift · iPaaS Migration Playbooks</p>
-        </div>`,
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Resend error ${res.status}: ${body}`);
-  }
+  await sendEmail(
+    toEmail,
+    'Your FlowShift API key recovery link',
+    `
+      <div style="font-family:sans-serif;max-width:520px;margin:40px auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px">
+        <h2 style="color:#4f46e5;margin:0 0 16px">FlowShift — API Key Recovery</h2>
+        <p style="color:#374151;line-height:1.6">
+          Click the button below to generate a new API key.
+          This link is valid for <strong>15 minutes</strong> and works only once.
+        </p>
+        <p style="margin:28px 0;text-align:center">
+          <a href="${recoveryUrl}"
+             style="background:#4f46e5;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block">
+            Reset my API key
+          </a>
+        </p>
+        <p style="color:#6b7280;font-size:13px">
+          If you didn't request this, ignore this email — your current key remains unchanged.
+        </p>
+        <hr style="border:none;border-top:1px solid #f3f4f6;margin:24px 0">
+        <p style="color:#9ca3af;font-size:12px;margin:0">FlowShift · iPaaS Migration Playbooks</p>
+      </div>`
+  );
 }
 
 // ── routes ────────────────────────────────────────────────────────────────────

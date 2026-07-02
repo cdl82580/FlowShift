@@ -5,6 +5,7 @@ import { getDb } from '../db';
 import { requireApiKey, AuthedRequest, UserRow } from '../auth';
 import { generateMigrationPlaybook, VALID_PLATFORMS } from '../services/claude';
 import { getDriveClient, getOrCreateUserFolder, createRunFolder, uploadFile, uploadAsGoogleDoc, exportGoogleDocAsDocx } from '../services/drive';
+import { sendEmail } from '../services/email';
 import { config } from '../config';
 
 const router = Router();
@@ -71,6 +72,62 @@ router.get('/:id', requireApiKey, async (req: Request, res: Response) => {
     return res.status(404).json({ error: 'Run not found' });
   }
   return res.json(formatRun(result.rows[0] as Record<string, unknown>));
+});
+
+// ── POST /runs/:id/email ── emails the playbook + import file link to the caller ────
+router.post('/:id/email', requireApiKey, async (req: Request, res: Response) => {
+  const { user } = req as AuthedRequest;
+  const db = getDb();
+  const result = await db.execute({
+    sql: 'SELECT * FROM runs WHERE id = ? AND user_id = ?',
+    args: [req.params.id, user.id],
+  });
+  if (!result.rows.length) {
+    return res.status(404).json({ error: 'Run not found' });
+  }
+
+  const run = formatRun(result.rows[0] as Record<string, unknown>);
+  if (run.status !== 'completed') {
+    return res.status(400).json({ error: 'Run has not completed yet' });
+  }
+
+  const title = run.source ? `${run.source} → ${run.destination}` : `${run.destination} Build Guide`;
+  const playbookUrl = `${config.appUrl}/runs/${run.id}`;
+  const importUrl   = `${config.appUrl}/runs/${run.id}?tab=import`;
+
+  const links = [
+    `<p style="margin:28px 0;text-align:center">
+      <a href="${playbookUrl}" style="background:#4f46e5;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block">
+        View playbook
+      </a>
+    </p>`,
+    run.has_import_file
+      ? `<p style="text-align:center;margin:0 0 12px"><a href="${importUrl}" style="color:#4f46e5;font-size:14px">View import file (.${run.import_file_extension})</a></p>`
+      : '',
+    run.gdrive_run_folder_url
+      ? `<p style="text-align:center;margin:0"><a href="${run.gdrive_run_folder_url}" style="color:#4f46e5;font-size:14px">Open in Google Drive</a></p>`
+      : '',
+  ].join('');
+
+  try {
+    await sendEmail(
+      user.email,
+      `Your FlowShift playbook: ${title}`,
+      `
+        <div style="font-family:sans-serif;max-width:520px;margin:40px auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px">
+          <h2 style="color:#4f46e5;margin:0 0 16px">FlowShift — ${title}</h2>
+          <p style="color:#374151;line-height:1.6">Your migration playbook is ready. Use the links below to view it.</p>
+          ${links}
+          <hr style="border:none;border-top:1px solid #f3f4f6;margin:24px 0">
+          <p style="color:#9ca3af;font-size:12px;margin:0">FlowShift · iPaaS Migration Playbooks</p>
+        </div>`
+    );
+  } catch (err) {
+    console.error(`Run ${run.id}: failed to email playbook:`, err);
+    return res.status(500).json({ error: 'Failed to send email' });
+  }
+
+  return res.json({ message: `Playbook emailed to ${user.email}` });
 });
 
 // ── Background processor ─────────────────────────────────────────────────────
